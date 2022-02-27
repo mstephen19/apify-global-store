@@ -3,8 +3,8 @@ declare class GlobalStore {
     classState: State;
     storeName: DefaultStoreName | string;
     constructor(customName?: string);
-    initialize(): Promise<void>;
+    initialize<T>(initialState?: T): Promise<void>;
     get state(): StateStoreValue;
-    setState(setStateParam: SetStateFunctionCallBack): void;
+    set(setStateParam: SetStateFunctionCallBack): void;
 }
 export default GlobalStore;

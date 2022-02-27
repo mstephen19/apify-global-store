@@ -3,6 +3,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const tslib_1 = require("tslib");
 const apify_1 = (0, tslib_1.__importDefault)(require("apify"));
 const log_1 = require("./log");
+const usedNames = new Set();
 class GlobalStore {
     constructor(customName) {
         Object.defineProperty(this, "classState", {
@@ -22,6 +23,9 @@ class GlobalStore {
             throw new Error('Custom store name must not contain illegal characters! Acceptable format is "my-store-name" or "mystorename".');
         }
         this.storeName = (customName === null || customName === void 0 ? void 0 : customName.toUpperCase()) || 'GLOBAL-STORE';
+        if (usedNames.has(this.storeName.toUpperCase()))
+            throw new Error(`Can only use the name "${this.storeName}" for one global store!`);
+        usedNames.add(this.storeName);
         apify_1.default.events.on('persistState', () => {
             (0, log_1.log)('Persisting global store...');
             return apify_1.default.setValue(this.storeName, this.classState);
@@ -30,17 +34,17 @@ class GlobalStore {
             return apify_1.default.setValue(this.storeName, this.classState);
         });
     }
-    async initialize() {
-        const data = await apify_1.default.getValue('GLOBAL-STORE');
+    async initialize(initialState) {
+        const data = await apify_1.default.getValue(this.storeName);
         if (!!data)
             this.classState = data;
         if (!data)
-            this.classState = { store: {} };
+            this.classState = { store: { ...initialState } };
     }
     get state() {
         return this.classState.store;
     }
-    setState(setStateParam) {
+    set(setStateParam) {
         const newState = { store: { ...this.classState.store, ...setStateParam(this.classState.store) } };
         this.classState = newState;
     }
