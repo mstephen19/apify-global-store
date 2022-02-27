@@ -1,0 +1,27 @@
+{
+  "name": "apify-global-store",
+  "version": "1.0.0",
+  "description": "Simple global store support for Apify",
+  "main": "dist/index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mstephen19/apify-global-store.git"
+  },
+  "keywords": [
+    "apify"
+  ],
+  "author": "Matt Stephens",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/mstephen19/apify-global-store/issues"
+  },
+  "homepage": "https://github.com/mstephen19/apify-global-store#readme",
+  "dependencies": {
+    "@apify/tsconfig": "^0.1.0",
+    "apify": "^2.2.2",
+    "console-log-colors": "^0.2.3"
+  }
+}

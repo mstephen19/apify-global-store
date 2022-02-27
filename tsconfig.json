@@ -1,0 +1,12 @@
+{
+    "extends": "@apify/tsconfig",
+    "compilerOptions": {
+        "skipLibCheck": true,
+        "outDir": "dist",
+        "removeComments": true,
+        "sourceMap": false,
+        "declarationMap": false,
+        "lib": ["es5", "es6", "dom", "dom.iterable"]
+    },
+    "include": ["./src/**/*"]
+}
