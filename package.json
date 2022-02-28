@@ -1,6 +1,6 @@
 {
   "name": "apify-global-store",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Simple global store support for Apify",
   "main": "dist/index.js",
   "scripts": {

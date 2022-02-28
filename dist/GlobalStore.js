@@ -18,6 +18,12 @@ class GlobalStore {
             writable: true,
             value: void 0
         });
+        Object.defineProperty(this, "reducer", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: void 0
+        });
         this.classState = { store: {} };
         if (customName && customName.match(/[`!@#$%^&*()_+\=\[\]{};':"\\|,.<>\/?~]/)) {
             throw new Error('Custom store name must not contain illegal characters! Acceptable format is "my-store-name" or "mystorename".');
@@ -26,6 +32,7 @@ class GlobalStore {
         if (usedNames.has(this.storeName.toUpperCase()))
             throw new Error(`Can only use the name "${this.storeName}" for one global store!`);
         usedNames.add(this.storeName);
+        this.reducer = null;
         apify_1.default.events.on('persistState', () => {
             (0, log_1.log)('Persisting global store...');
             return apify_1.default.setValue(this.storeName, this.classState);
@@ -47,6 +54,15 @@ class GlobalStore {
     set(setStateParam) {
         const newState = { store: { ...this.classState.store, ...setStateParam(this.classState.store) } };
         this.classState = newState;
+    }
+    addReducer(reducerFn) {
+        this.reducer = reducerFn;
+    }
+    setWithReducer(action) {
+        if (!this.reducer)
+            throw new Error('No reducer function was passed using the "addReducer" method!');
+        const newState = this.reducer(this.state.store, action);
+        this.classState = { store: { ...newState } };
     }
 }
 exports.default = GlobalStore;
