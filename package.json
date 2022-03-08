@@ -1,6 +1,6 @@
 {
   "name": "apify-global-store",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Simple global store support for Apify",
   "main": "dist/index.js",
   "scripts": {
@@ -25,6 +25,10 @@
   "dependencies": {
     "@apify/tsconfig": "^0.1.0",
     "apify": "^2.2.2",
-    "console-log-colors": "^0.2.3"
+    "console-log-colors": "^0.2.3",
+    "object-path": "^0.11.8"
+  },
+  "devDependencies": {
+    "@types/object-path": "^0.11.1"
   }
 }

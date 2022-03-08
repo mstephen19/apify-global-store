@@ -91,9 +91,22 @@ store.set((prev) => {
 });
 ```
 
+### `store.pushPathToDataset()`
+
+| Argument      | Type                     | Required | Description                                                                                                                                      |
+| ------------- | ------------------------ | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| path | string | **true** | A string version of the path you'd like to push within the state. |
+| dataset | Dataset | **false** | The dataset to push to. If not provided a dataset, the default one will be used. |
+
+```JavaScript
+await store.pushPathToDataset(`products.${productId}.reviews.${reviewId}`)
+```
+
+> When using this method to push to a dataset, the path is deleted within the state. If you don't want the data to be deleted from the global store after being pushed to the dataset, use regular `Apify.pushData()` instead
+
 ### Advanced usage
 
-## `store.addReducer()`
+### `store.addReducer()`
 
 | Argument  | Type            | Required | Description                                                                 |
 | --------- | --------------- | -------- | --------------------------------------------------------------------------- |
@@ -115,7 +128,7 @@ const reducer = (state, action) => {
 store.addReducer(reducer);
 ```
 
-## `store.setWithReducer()`
+### `store.setWithReducer()`
 
 | Argument | Type          | Required | Description                                    |
 | -------- | ------------- | -------- | ---------------------------------------------- |

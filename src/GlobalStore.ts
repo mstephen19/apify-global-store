@@ -1,4 +1,6 @@
-import Apify from 'apify';
+import Apify, { Dataset } from 'apify';
+import objectPath from 'object-path';
+
 import { log } from './log';
 
 import { State, SetStateFunctionCallBack, DefaultStoreName, StateStoreValue, ReducerFunction, ReducerAction } from './types';
@@ -31,16 +33,18 @@ class GlobalStore {
         this.reducer = null;
 
         Apify.events.on('persistState', () => {
-            log('Persisting global store...');
+            log('Persisting store...');
             return Apify.setValue(this.storeName, this.classState);
         });
 
         Apify.events.on('migrating', () => {
+            log('Handling migration...');
             return Apify.setValue(this.storeName, this.classState);
         });
     }
 
     /**
+     * @param initialState Initial state to start with. Defaults to an empty object
      * Initiate the global state. This is require to use the global store.
      */
     async initialize<T>(initialState?: T): Promise<void> {
@@ -58,7 +62,8 @@ class GlobalStore {
     }
 
     /**
-     * Set the state to a new value, or modify the previous state by passing in a callback function which the current state is automatically passed in.
+     *
+     * @param setStateParam Set the state to a new value, or modify the previous state by passing in a callback function which the current state is automatically passed in.
      */
     set(setStateParam: SetStateFunctionCallBack) {
         const newState = { store: { ...this.classState.store, ...setStateParam(this.classState.store) } };
@@ -67,7 +72,7 @@ class GlobalStore {
 
     /**
      *
-     * Add a custom reducer function to the class, enabling you to make complex modifications to the state.
+     * @param reducerFn Self-defined reducer function taking the parameters of (state, action) - state is the previous state which is automatically passed in
      */
     addReducer(reducerFn: ReducerFunction) {
         this.reducer = reducerFn;
@@ -75,14 +80,33 @@ class GlobalStore {
 
     /**
      *
-     * Pass the action into your reducer function.
+     * @param action Your self-defined action when using the addReducer function
      */
     setWithReducer<T>(action: ReducerAction<T>) {
         if (!this.reducer) throw new Error('No reducer function was passed using the "addReducer" method!');
 
-        const newState = this.reducer(this.state.store, action);
+        const newState = this.reducer(this.classState.store, action);
 
         this.classState = { store: { ...newState } };
+    }
+
+    /**
+     *
+     * @param path A string version of the path within the state that you'd like to push to the dataset
+     * @param dataset Optional, provide a dataset to push to. If not provided, the default dataset will be used.
+     */
+    async pushPathToDataset(path: string, dataset?: Dataset) {
+        let value: Record<string, unknown> | [];
+        try {
+            value = objectPath.get(this.classState.store, path);
+        } catch (err) {
+            throw new Error(`Path ${path} not found within store: ${err}`);
+        }
+
+        objectPath.del(this.classState.store, path);
+
+        if (!dataset) return Apify.pushData(value);
+        return dataset.pushData(value);
     }
 }
 

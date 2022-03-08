@@ -6,7 +6,7 @@ export interface ReducerAction<T> {
     [key: string]: T;
 }
 
-export type StateStoreValue = object | any;
+export type StateStoreValue = Record<string, unknown>;
 
 export type SetStateFunctionCallBack = (previous: StateStoreValue) => StateStoreValue;
 
