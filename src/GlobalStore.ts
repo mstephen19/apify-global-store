@@ -5,7 +5,7 @@ import { log } from './log';
 
 import { State, SetStateFunctionCallBack, DefaultStoreName, StateStoreValue, ReducerFunction, ReducerAction } from './types';
 
-const usedNames = new Set();
+const usedNames: Set<string> = new Set();
 
 /**
  * An instance of this class must be created, followed by the initialize method, in order to use the global store.
@@ -15,20 +15,10 @@ class GlobalStore {
     storeName: DefaultStoreName | string;
     reducer: ReducerFunction | null;
 
-    constructor(customName?: string) {
-        this.classState = { store: {} };
+    private constructor(storeName: string, initialState: State) {
+        this.classState = initialState;
 
-        // Can only match certain characters
-        if (customName && customName.match(/[`!@#$%^&*()_+\=\[\]{};':"\\|,.<>\/?~]/)) {
-            throw new Error('Custom store name must not contain illegal characters! Acceptable format is "my-store-name" or "mystorename".');
-        }
-
-        this.storeName = customName?.toUpperCase() || 'GLOBAL-STORE';
-
-        // Name can only be used once
-        if (usedNames.has(this.storeName.toUpperCase())) throw new Error(`Can only use the name "${this.storeName}" for one global store!`);
-
-        usedNames.add(this.storeName);
+        this.storeName = storeName || 'GLOBAL-STORE';
 
         this.reducer = null;
 
@@ -36,21 +26,43 @@ class GlobalStore {
             log('Persisting store...');
             return Apify.setValue(this.storeName, this.classState);
         });
+    }
 
-        Apify.events.on('migrating', () => {
-            log('Handling migration...');
-            return Apify.setValue(this.storeName, this.classState);
-        });
+    /**
+     * Drop all currently open global store.
+     */
+    static async dropAllStores() {
+        for (const name of [...usedNames]) {
+            const kv = await Apify.openKeyValueStore(name);
+            await kv.drop();
+        }
     }
 
     /**
      * @param initialState Initial state to start with. Defaults to an empty object
      * Initiate the global state. This is require to use the global store.
      */
-    async initialize<T>(initialState?: T): Promise<void> {
-        const data = await Apify.getValue(this.storeName);
-        if (!!data) this.classState = data as State;
-        if (!data) this.classState = { store: { ...initialState } };
+    static async init(customName?: string, initialState?: Record<string, unknown>): Promise<GlobalStore> {
+        // Can only match certain characters
+        if (customName && customName.match(/[`!@#$%^&*()_+\=\[\]{};':"\\|,.<>\/?~]/)) {
+            throw new Error('Custom store name must not contain illegal characters! Acceptable format is "my-store-name" or "mystorename".');
+        }
+
+        const storeName = customName?.toUpperCase() || 'GLOBAL-STORE';
+
+        // Name can only be used once
+        if (usedNames.has(storeName.toUpperCase())) throw new Error(`Can only use the name "${storeName}" for one global store!`);
+
+        usedNames.add(storeName);
+
+        let state: State = { store: {} };
+
+        const data = await Apify.getValue(storeName);
+
+        if (!!data) state = data as State;
+        if (!data) state = { store: { ...initialState } };
+
+        return new GlobalStore(storeName, state);
     }
 
     /**
@@ -107,6 +119,13 @@ class GlobalStore {
 
         if (!dataset) return Apify.pushData(value);
         return dataset.pushData(value);
+    }
+
+    /**
+     * Completely clear out the entire store of all data
+     */
+    dump() {
+        this.classState = { store: {} };
     }
 }
 

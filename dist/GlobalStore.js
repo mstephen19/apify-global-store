@@ -6,7 +6,7 @@ const object_path_1 = (0, tslib_1.__importDefault)(require("object-path"));
 const log_1 = require("./log");
 const usedNames = new Set();
 class GlobalStore {
-    constructor(customName) {
+    constructor(storeName, initialState) {
         Object.defineProperty(this, "classState", {
             enumerable: true,
             configurable: true,
@@ -25,30 +25,35 @@ class GlobalStore {
             writable: true,
             value: void 0
         });
-        this.classState = { store: {} };
-        if (customName && customName.match(/[`!@#$%^&*()_+\=\[\]{};':"\\|,.<>\/?~]/)) {
-            throw new Error('Custom store name must not contain illegal characters! Acceptable format is "my-store-name" or "mystorename".');
-        }
-        this.storeName = (customName === null || customName === void 0 ? void 0 : customName.toUpperCase()) || 'GLOBAL-STORE';
-        if (usedNames.has(this.storeName.toUpperCase()))
-            throw new Error(`Can only use the name "${this.storeName}" for one global store!`);
-        usedNames.add(this.storeName);
+        this.classState = initialState;
+        this.storeName = storeName || 'GLOBAL-STORE';
         this.reducer = null;
         apify_1.default.events.on('persistState', () => {
             (0, log_1.log)('Persisting store...');
             return apify_1.default.setValue(this.storeName, this.classState);
         });
-        apify_1.default.events.on('migrating', () => {
-            (0, log_1.log)('Handling migration...');
-            return apify_1.default.setValue(this.storeName, this.classState);
-        });
     }
-    async initialize(initialState) {
-        const data = await apify_1.default.getValue(this.storeName);
+    static async dropAllStores() {
+        for (const name of [...usedNames]) {
+            const kv = await apify_1.default.openKeyValueStore(name);
+            await kv.drop();
+        }
+    }
+    static async init(customName, initialState) {
+        if (customName && customName.match(/[`!@#$%^&*()_+\=\[\]{};':"\\|,.<>\/?~]/)) {
+            throw new Error('Custom store name must not contain illegal characters! Acceptable format is "my-store-name" or "mystorename".');
+        }
+        const storeName = (customName === null || customName === void 0 ? void 0 : customName.toUpperCase()) || 'GLOBAL-STORE';
+        if (usedNames.has(storeName.toUpperCase()))
+            throw new Error(`Can only use the name "${storeName}" for one global store!`);
+        usedNames.add(storeName);
+        let state = { store: {} };
+        const data = await apify_1.default.getValue(storeName);
         if (!!data)
-            this.classState = data;
+            state = data;
         if (!data)
-            this.classState = { store: { ...initialState } };
+            state = { store: { ...initialState } };
+        return new GlobalStore(storeName, state);
     }
     get state() {
         return this.classState.store;
@@ -78,6 +83,9 @@ class GlobalStore {
         if (!dataset)
             return apify_1.default.pushData(value);
         return dataset.pushData(value);
+    }
+    dump() {
+        this.classState = { store: {} };
     }
 }
 exports.default = GlobalStore;

@@ -4,12 +4,14 @@ declare class GlobalStore {
     classState: State;
     storeName: DefaultStoreName | string;
     reducer: ReducerFunction | null;
-    constructor(customName?: string);
-    initialize<T>(initialState?: T): Promise<void>;
+    private constructor();
+    static dropAllStores(): Promise<void>;
+    static init(customName?: string, initialState?: Record<string, unknown>): Promise<GlobalStore>;
     get state(): StateStoreValue;
     set(setStateParam: SetStateFunctionCallBack): void;
     addReducer(reducerFn: ReducerFunction): void;
     setWithReducer<T>(action: ReducerAction<T>): void;
     pushPathToDataset(path: string, dataset?: Dataset): Promise<void>;
+    dump(): void;
 }
 export default GlobalStore;
