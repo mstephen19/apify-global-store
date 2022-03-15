@@ -26,21 +26,14 @@ class GlobalStore {
             log('Persisting store...');
             return Apify.setValue(this.storeName, this.classState);
         });
+
+        log(`Store initialized with name: ${storeName}`);
     }
 
     /**
-     * Drop all currently open global store.
-     */
-    static async dropAllStores() {
-        for (const name of [...usedNames]) {
-            const kv = await Apify.openKeyValueStore(name);
-            await kv.drop();
-        }
-    }
-
-    /**
+     * @param customName Name for the global store. Defaults to 'GLOBAL-STORE'
      * @param initialState Initial state to start with. Defaults to an empty object
-     * Initiate the global state. This is require to use the global store.
+     * Initiate the global state store. GlobalStore doesn't have a public constructor function; therefore, this must be used.
      */
     static async init(customName?: string, initialState?: Record<string, unknown>): Promise<GlobalStore> {
         // Can only match certain characters

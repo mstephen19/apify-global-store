@@ -5,7 +5,6 @@ declare class GlobalStore {
     storeName: DefaultStoreName | string;
     reducer: ReducerFunction | null;
     private constructor();
-    static dropAllStores(): Promise<void>;
     static init(customName?: string, initialState?: Record<string, unknown>): Promise<GlobalStore>;
     get state(): StateStoreValue;
     set(setStateParam: SetStateFunctionCallBack): void;

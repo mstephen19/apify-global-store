@@ -32,12 +32,7 @@ class GlobalStore {
             (0, log_1.log)('Persisting store...');
             return apify_1.default.setValue(this.storeName, this.classState);
         });
-    }
-    static async dropAllStores() {
-        for (const name of [...usedNames]) {
-            const kv = await apify_1.default.openKeyValueStore(name);
-            await kv.drop();
-        }
+        (0, log_1.log)(`Store initialized with name: ${storeName}`);
     }
     static async init(customName, initialState) {
         if (customName && customName.match(/[`!@#$%^&*()_+\=\[\]{};':"\\|,.<>\/?~]/)) {

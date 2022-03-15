@@ -8,9 +8,23 @@ npm install apify-global-store
 
 ## About
 
-This is an extremely simple API which allows you to easily create and manage multiple global stores.
+This is an extremely simple API which allows you to easily create and manage multiple global stores local to an actor's run.
 
 State persistence and actor migrations are automatically handled, so the global state will not be lost on migrations or graceful aborts.
+
+## Importing
+
+ES6+
+
+```TypeScript
+import { GlobalStore } from 'apify-global-store'
+```
+
+ES5-
+
+```JavaScript
+const { GlobalStore } = require('apify-global-store')
+```
 
 ## Example
 
@@ -19,8 +33,7 @@ const Apify = require('apify');
 const { GlobalStore } = require('apify-global-store');
 
 Apify.main(async () => {
-    const store = new GlobalStore();
-    await store.initialize();
+    const store = await GlobalStore.init();
 
     console.log(store.state) // -> {}
 
@@ -44,27 +57,18 @@ Apify.main(async () => {
 });
 ```
 
-### `new GlobalStore()`
+### `GlobalStore.init()`
 
-| Argument   | Type   | Required | Description                                                                                                                 |
-| ---------- | ------ | -------- | --------------------------------------------------------------------------------------------------------------------------- |
-| customName | string | false    | Custom name for the global store. Useful when creating multiple stores. If not provided, the default name is 'GLOBAL-STORE' |
+| Argument     | Type            | Required | Description                                                                                                                 |
+| ------------ | --------------- | -------- | --------------------------------------------------------------------------------------------------------------------------- |
+| customName   | string          | false    | Custom name for the global store. Useful when creating multiple stores. If not provided, the default name is 'GLOBAL-STORE' |
+| initialState | StateStoreValue | false    | The initial state to start with (if the state doesn't already exist in the key-value store)                                 |
 
 ```JavaScript
-const store = new GlobalStore('hello-world');
+const store = await GlobalStore.init('hello-world');
 ```
 
 You can only pass letters and "-" within the string, otherwise an error will be thrown (to follow naming conventions).
-
-### `store.initialize()`
-
-| Argument     | Type            | Required | Description                                                                                 |
-| ------------ | --------------- | -------- | ------------------------------------------------------------------------------------------- |
-| initialState | StateStoreValue | true     | The initial state to start with (if the state doesn't already exist in the key-value store) |
-
-```JavaScript
-await store.initialize({ hello: 'world' });
-```
 
 > A name for a store can only be used once. That includes the default name.
 
@@ -93,10 +97,10 @@ store.set((prev) => {
 
 ### `store.pushPathToDataset()`
 
-| Argument      | Type                     | Required | Description                                                                                                                                      |
-| ------------- | ------------------------ | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
-| path | string | **true** | A string version of the path you'd like to push within the state. |
-| dataset | Dataset | **false** | The dataset to push to. If not provided a dataset, the default one will be used. |
+| Argument | Type    | Required  | Description                                                                      |
+| -------- | ------- | --------- | -------------------------------------------------------------------------------- |
+| path     | string  | **true**  | A string version of the path you'd like to push within the state.                |
+| dataset  | Dataset | **false** | The dataset to push to. If not provided a dataset, the default one will be used. |
 
 ```JavaScript
 await store.pushPathToDataset(`products.${productId}.reviews.${reviewId}`)
@@ -104,7 +108,11 @@ await store.pushPathToDataset(`products.${productId}.reviews.${reviewId}`)
 
 > When using this method to push to a dataset, the path is deleted within the state. If you don't want the data to be deleted from the global store after being pushed to the dataset, use regular `Apify.pushData()` instead
 
-### Advanced usage
+### `store.dump()`
+
+Completely empty the entire contents of the store.
+
+## Advanced usage
 
 ### `store.addReducer()`
 
