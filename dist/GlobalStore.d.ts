@@ -7,6 +7,7 @@ declare class GlobalStore {
     reducer: ReducerFunction | null;
     private constructor();
     static init({ customName, initialState }?: InitializeOptions): Promise<GlobalStore>;
+    static summon(storeName: string): GlobalStore;
     get state(): StoreState;
     get info(): StoreData;
     set(setStateParam: SetStateFunctionCallBack): void;
@@ -14,6 +15,5 @@ declare class GlobalStore {
     setWithReducer<T>(action: ReducerParam<T>): void;
     pushPathToDataset(path: string, dataset?: Dataset): Promise<void>;
     dump(): void;
-    static summon(storeName: string): GlobalStore;
 }
 export default GlobalStore;

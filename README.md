@@ -1,5 +1,25 @@
 # Apify Global Store
 
+## Table of Contents:
+
+-   [Installation](#installation)
+-   [About](#about)
+-   [Importing](#importing)
+-   [Example](#example)
+-   [Usage](#usage)
+    -   [`await GlobalStore.init()`](#await-globalstoreinit)
+    -   [`store.state`](#storestate)
+    -   [`store.info`](#storeinfo)
+    -   [`store.set()`](#storeset)
+    -   [`await store.pushPathToDataset()`](#await-storepushpathtodataset)
+    -   [`store.dump()`](#storedump)
+    -   [`GlobalStore.summon()`](#globalstoresummon)
+-   [Advanced Usage](#advanced-usage)
+    -   [`store.addReducer()`](#storeaddreducer)
+    -   [`store.setWithReducer()`](#storesetwithreducer)
+-   [Storage](#in-the-key-value-store)
+-   [Types](#available-types)
+
 ## Installation
 
 ```
@@ -57,6 +77,8 @@ Apify.main(async () => {
 });
 ```
 
+## Usage
+
 ### `await GlobalStore.init()`
 
 (initializeOptions: _InitializeOptions_) => `Promise<GlobalStore>`
@@ -79,9 +101,19 @@ You can only pass letters and "-" within the string, otherwise an error will be 
 
 ### `store.state`
 
+**Usage:**
+
+```JavaScript
+const { myValue } = store.state
+```
+
 A getter method that returns the current state object of the store.
 
 ### `store.info`
+
+```JavaScript
+const { sizeInBytes, lastModified } = store.info
+```
 
 An object containing information about the contents of the store. Example:
 
@@ -100,7 +132,7 @@ An object containing information about the contents of the store. Example:
 | ------------- | ------------------------ | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
 | setStateParam | SetStateFunctionCallBack | **true** | A callback function in which the current state is passed and can be modified. Return value must be an object which will be set as the new state. |
 
-A synchronous function which sets the current state.
+A synchronous function which sets the current state. The previous state is passed into the callback function as a parameter. It is recommended to refer to the previous state through this parameter instead of using `store.state` within the callback.
 
 **Usage:**
 
@@ -121,6 +153,8 @@ store.set((prev) => {
 | -------- | ------- | --------- | -------------------------------------------------------------------------------- |
 | path     | string  | **true**  | A string version of the path you'd like to push within the state.                |
 | dataset  | Dataset | **false** | The dataset to push to. If not provided a dataset, the default one will be used. |
+
+Push some data from the store into the specified dataset (or into the default one), then automatically delete it from the store after it's been pushed.
 
 **Usage:**
 
@@ -145,6 +179,8 @@ Completely empty the entire contents of the store.
 | storeName | string | **true** | The name of the store to summon. |
 
 A static method which returns the instance of the store attached to the name provided. A useful and simple aternative to passing a store instance around a parameter.
+
+> Note: You are not required to provide the uppercase version of the store name in the `storeName` parameter. It is automatically done for you.
 
 **Usage:**
 

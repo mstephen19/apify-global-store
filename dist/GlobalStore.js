@@ -51,6 +51,11 @@ class GlobalStore {
             state = { store: { ...initialState }, data: (0, utils_2.getStoreData)(initialState || {}) };
         return new GlobalStore(storeName, state);
     }
+    static summon(storeName) {
+        if (!storeInstances[storeName.toUpperCase()])
+            throw new Error(`Store with name ${storeName.toUpperCase()} doesn't exist!`);
+        return storeInstances[storeName.toUpperCase()];
+    }
     get state() {
         return this.classState.store;
     }
@@ -89,11 +94,6 @@ class GlobalStore {
     dump() {
         (0, utils_1.log)(`Dumping entire store: ${this.storeName}`);
         this.classState = { store: {}, data: (0, utils_2.getStoreData)({}) };
-    }
-    static summon(storeName) {
-        if (!storeInstances[storeName.toUpperCase()])
-            throw new Error(`Store with name ${storeName.toUpperCase()} doesn't exist!`);
-        return storeInstances[storeName.toUpperCase()];
     }
 }
 exports.default = GlobalStore;

@@ -62,6 +62,15 @@ class GlobalStore {
 
     /**
      *
+     * @param storeName The name of the store you'd like to have returned.
+     */
+    static summon(storeName: string) {
+        if (!storeInstances[storeName.toUpperCase()]) throw new Error(`Store with name ${storeName.toUpperCase()} doesn't exist!`);
+        return storeInstances[storeName.toUpperCase()];
+    }
+
+    /**
+     *
      * Retrieve the current state. Can also be done with storeInstance.state (not called as a function).
      */
     get state(): StoreState {
@@ -132,15 +141,6 @@ class GlobalStore {
     dump() {
         log(`Dumping entire store: ${this.storeName}`);
         this.classState = { store: {}, data: getStoreData({}) };
-    }
-
-    /**
-     *
-     * @param storeName The name of the store you'd like to have returned.
-     */
-    static summon(storeName: string) {
-        if (!storeInstances[storeName.toUpperCase()]) throw new Error(`Store with name ${storeName.toUpperCase()} doesn't exist!`);
-        return storeInstances[storeName.toUpperCase()];
     }
 }
 
