@@ -136,7 +136,7 @@ await store.pushPathToDataset(`products.${productId}.reviews.${reviewId}`)
 
 Completely empty the entire contents of the store.
 
-### `store.summon()`
+### `GlobalStore.summon()`
 
 (storeName: string) => `GlobalStore`
 
