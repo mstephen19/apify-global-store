@@ -1,4 +1,3 @@
 import GlobalStore from './GlobalStore';
-import { StateStoreValue, SetStateFunctionCallBack, ReducerAction } from './types';
-declare type State = StateStoreValue;
-export { GlobalStore, State, SetStateFunctionCallBack, ReducerAction };
+import { StoreState, SetStateFunctionCallBack, ReducerParam, ReducerFunction, StoreData } from './types';
+export { GlobalStore, StoreState, SetStateFunctionCallBack, ReducerParam, ReducerFunction, StoreData };

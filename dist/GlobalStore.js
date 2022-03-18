@@ -3,8 +3,9 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const tslib_1 = require("tslib");
 const apify_1 = (0, tslib_1.__importDefault)(require("apify"));
 const object_path_1 = (0, tslib_1.__importDefault)(require("object-path"));
-const log_1 = require("./log");
-const usedNames = new Set();
+const utils_1 = require("./utils");
+const utils_2 = require("./utils");
+const storeInstances = {};
 class GlobalStore {
     constructor(storeName, initialState) {
         Object.defineProperty(this, "classState", {
@@ -29,42 +30,48 @@ class GlobalStore {
         this.storeName = storeName || 'GLOBAL-STORE';
         this.reducer = null;
         apify_1.default.events.on('persistState', () => {
-            (0, log_1.log)('Persisting store...');
+            (0, utils_1.log)('Persisting store...');
             return apify_1.default.setValue(this.storeName, this.classState);
         });
-        (0, log_1.log)(`Store initialized with name: ${storeName}`);
+        storeInstances[storeName] = this;
+        (0, utils_1.log)(`Store initialized with name: ${storeName}`);
     }
-    static async init(customName, initialState) {
+    static async init({ customName, initialState } = {}) {
         if (customName && customName.match(/[`!@#$%^&*()_+\=\[\]{};':"\\|,.<>\/?~]/)) {
             throw new Error('Custom store name must not contain illegal characters! Acceptable format is "my-store-name" or "mystorename".');
         }
         const storeName = (customName === null || customName === void 0 ? void 0 : customName.toUpperCase()) || 'GLOBAL-STORE';
-        if (usedNames.has(storeName.toUpperCase()))
+        if (storeInstances[storeName.toUpperCase()])
             throw new Error(`Can only use the name "${storeName}" for one global store!`);
-        usedNames.add(storeName);
-        let state = { store: {} };
+        let state = { store: {}, data: {} };
         const data = await apify_1.default.getValue(storeName);
         if (!!data)
             state = data;
         if (!data)
-            state = { store: { ...initialState } };
+            state = { store: { ...initialState }, data: (0, utils_2.getStoreData)(initialState || {}) };
         return new GlobalStore(storeName, state);
     }
     get state() {
         return this.classState.store;
     }
+    get info() {
+        return this.classState.data;
+    }
     set(setStateParam) {
-        const newState = { store: { ...this.classState.store, ...setStateParam(this.classState.store) } };
+        const newStoreStateValue = { ...setStateParam(this.classState.store) };
+        const newState = { store: newStoreStateValue, data: (0, utils_2.getStoreData)(newStoreStateValue) };
         this.classState = newState;
     }
     addReducer(reducerFn) {
+        if (this.reducer)
+            throw new Error('This store already has a reducer function!');
         this.reducer = reducerFn;
     }
     setWithReducer(action) {
         if (!this.reducer)
             throw new Error('No reducer function was passed using the "addReducer" method!');
         const newState = this.reducer(this.classState.store, action);
-        this.classState = { store: { ...newState } };
+        this.classState = { store: { ...newState }, data: (0, utils_2.getStoreData)(newState) };
     }
     async pushPathToDataset(path, dataset) {
         let value;
@@ -80,7 +87,13 @@ class GlobalStore {
         return dataset.pushData(value);
     }
     dump() {
-        this.classState = { store: {} };
+        (0, utils_1.log)(`Dumping entire store: ${this.storeName}`);
+        this.classState = { store: {}, data: (0, utils_2.getStoreData)({}) };
+    }
+    static summon(storeName) {
+        if (!storeInstances[storeName.toUpperCase()])
+            throw new Error(`Store with name ${storeName.toUpperCase()} doesn't exist!`);
+        return storeInstances[storeName.toUpperCase()];
     }
 }
 exports.default = GlobalStore;

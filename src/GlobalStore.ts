@@ -1,11 +1,13 @@
 import Apify, { Dataset } from 'apify';
 import objectPath from 'object-path';
 
-import { log } from './log';
+import { log } from './utils';
+import { getStoreData } from './utils';
 
-import { State, SetStateFunctionCallBack, DefaultStoreName, StateStoreValue, ReducerFunction, ReducerAction } from './types';
+import { State, SetStateFunctionCallBack, DefaultStoreName, StoreState, ReducerFunction, ReducerParam, InitializeOptions } from './types';
+import { StoreData } from '.';
 
-const usedNames: Set<string> = new Set();
+const storeInstances: Record<string, GlobalStore> = {};
 
 /**
  * An instance of this class must be created, followed by the initialize method, in order to use the global store.
@@ -27,6 +29,8 @@ class GlobalStore {
             return Apify.setValue(this.storeName, this.classState);
         });
 
+        storeInstances[storeName] = this;
+
         log(`Store initialized with name: ${storeName}`);
     }
 
@@ -35,7 +39,7 @@ class GlobalStore {
      * @param initialState Initial state to start with. Defaults to an empty object
      * Initiate the global state store. GlobalStore doesn't have a public constructor function; therefore, this must be used.
      */
-    static async init(customName?: string, initialState?: Record<string, unknown>): Promise<GlobalStore> {
+    static async init({ customName, initialState }: InitializeOptions = {}): Promise<GlobalStore> {
         // Can only match certain characters
         if (customName && customName.match(/[`!@#$%^&*()_+\=\[\]{};':"\\|,.<>\/?~]/)) {
             throw new Error('Custom store name must not contain illegal characters! Acceptable format is "my-store-name" or "mystorename".');
@@ -44,16 +48,14 @@ class GlobalStore {
         const storeName = customName?.toUpperCase() || 'GLOBAL-STORE';
 
         // Name can only be used once
-        if (usedNames.has(storeName.toUpperCase())) throw new Error(`Can only use the name "${storeName}" for one global store!`);
+        if (storeInstances[storeName.toUpperCase()]) throw new Error(`Can only use the name "${storeName}" for one global store!`);
 
-        usedNames.add(storeName);
-
-        let state: State = { store: {} };
+        let state: State = { store: {}, data: {} };
 
         const data = await Apify.getValue(storeName);
 
         if (!!data) state = data as State;
-        if (!data) state = { store: { ...initialState } };
+        if (!data) state = { store: { ...initialState }, data: getStoreData(initialState || {}) };
 
         return new GlobalStore(storeName, state);
     }
@@ -62,8 +64,15 @@ class GlobalStore {
      *
      * Retrieve the current state. Can also be done with storeInstance.state (not called as a function).
      */
-    get state(): StateStoreValue {
+    get state(): StoreState {
         return this.classState.store;
+    }
+
+    /**
+     * Get various info about the store.
+     */
+    get info(): StoreData {
+        return this.classState.data;
     }
 
     /**
@@ -71,7 +80,9 @@ class GlobalStore {
      * @param setStateParam Set the state to a new value, or modify the previous state by passing in a callback function which the current state is automatically passed in.
      */
     set(setStateParam: SetStateFunctionCallBack) {
-        const newState = { store: { ...this.classState.store, ...setStateParam(this.classState.store) } };
+        const newStoreStateValue = { ...setStateParam(this.classState.store) };
+
+        const newState = { store: newStoreStateValue, data: getStoreData(newStoreStateValue) };
         this.classState = newState;
     }
 
@@ -80,6 +91,7 @@ class GlobalStore {
      * @param reducerFn Self-defined reducer function taking the parameters of (state, action) - state is the previous state which is automatically passed in
      */
     addReducer(reducerFn: ReducerFunction) {
+        if (this.reducer) throw new Error('This store already has a reducer function!');
         this.reducer = reducerFn;
     }
 
@@ -87,12 +99,12 @@ class GlobalStore {
      *
      * @param action Your self-defined action when using the addReducer function
      */
-    setWithReducer<T>(action: ReducerAction<T>) {
+    setWithReducer<T>(action: ReducerParam<T>) {
         if (!this.reducer) throw new Error('No reducer function was passed using the "addReducer" method!');
 
         const newState = this.reducer(this.classState.store, action);
 
-        this.classState = { store: { ...newState } };
+        this.classState = { store: { ...newState }, data: getStoreData(newState) };
     }
 
     /**
@@ -115,10 +127,20 @@ class GlobalStore {
     }
 
     /**
-     * Completely clear out the entire store of all data
+     * Completely clear out the entire store of all data, such as its size, as well as the last time it was modified.
      */
     dump() {
-        this.classState = { store: {} };
+        log(`Dumping entire store: ${this.storeName}`);
+        this.classState = { store: {}, data: getStoreData({}) };
+    }
+
+    /**
+     *
+     * @param storeName The name of the store you'd like to have returned.
+     */
+    static summon(storeName: string) {
+        if (!storeInstances[storeName.toUpperCase()]) throw new Error(`Store with name ${storeName.toUpperCase()} doesn't exist!`);
+        return storeInstances[storeName.toUpperCase()];
     }
 }
 
