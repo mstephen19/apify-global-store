@@ -23,7 +23,7 @@
     -   [`GlobalStore.summonAll()`](#globalstoresummonall)
     -   [`await store.forceSave()`](#await-storeforcesave)
     -   [`store.deletePath()`](#storedeletepath)
-    -   [Best practices with store namagement](#best-practices-with-store-management)
+    -   [Best practices with store management](#best-practices-with-store-management)
 -   [Advanced Usage](#advanced-usage)
     -   [`store.addReducer()`](#storeaddreducer)
     -   [`store.setWithReducer()`](#storesetwithreducer)
@@ -231,7 +231,7 @@ Similar to `summon`, but returns the entire `storeInstances` object, which is a 
 
 The store's data is saved to the Key-Value Store every single time the "persistState" event is fired. It can also be forced to be saved instantly with this method.
 
-### Best practices with store namagement
+### Best practices with store management
 
 When using more than one instance of GlobalStore, it is best to use custom store names, and to put them into a constant:
 
