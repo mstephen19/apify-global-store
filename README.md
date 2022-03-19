@@ -28,8 +28,9 @@
     -   [`store.addReducer()`](#storeaddreducer)
     -   [`store.setWithReducer()`](#storesetwithreducer)
     -   [Best practices when using a reducer](#best-practices-when-using-a-reducer)
--   [Storage](#in-the-key-value-store)
--   [Types](#available-types)
+-   [Storage](#storage)
+-   [Available Types](#available-types)
+-   [License](#license)
 
 ## Installation
 
@@ -237,15 +238,19 @@ When using more than one instance of GlobalStore, it is best to use custom store
 `consts.ts`:
 
 ```TypeScript
-export enum storeNames { PRODUCTS = 'PRODUCTS', HOTELS = 'HOTELS' }
+export enum storeNames { PRODUCTS = 'PRODUCTS', HOTELS = 'HOTELS' };
 ```
 
 `main.ts`:
 
 ```TypeScript
-import { storeNames } from './consts'
+import { storeNames } from './consts';
 
-const store = await GlobalStore.init({ name: storeNames.PRODUCTS })
+const productStore = await GlobalStore.init({ name: storeNames.PRODUCTS });
+
+const hotelStore = await GlobalStore.init({name: storeNames.HOTELS});
+
+const summoned = GlobalStore.summon(storeNames.HOTELS);
 ```
 
 ### `store.deletePath()`
@@ -369,7 +374,7 @@ store.setWithReducer({
     });
 ```
 
-## In the Key-Value Store
+## Storage
 
 In the Key-Value store, each store will be represented by an object looking like this:
 
@@ -380,18 +385,70 @@ In the Key-Value store, each store will be represented by an object looking like
     },
     "data": {
         "sizeInBytes": 17,
-        "lastModified": "2022-03-18T15:39:45.041Z"
+        "lastModified": "2022-03-18T15:39:45.041Z",
+        "globalStoreVersion": "1.0.9"
     }
 }
 ```
+
+If the `cloud` option was not set to `true` upon the store's initialization, the store will be local to the actor's run under a key in the default Key-Value store.
+
+If `cloud` was set to `true`, the global store will be stored in the cloud on your Apify account, under a named Key-Value store called `CLOUD-GLOBAL-STORES`.
 
 > **Please:** DO NOT manually modify these objects using `Apify.setValue()`. GlobalStore uses the actor's default Key-Value store under the hood.
 
 ## Available Types
 
--   _GlobalStore_
--   _StoreState_
--   _SetStateFunctionCallback_
--   _ReducerParam_
--   _ReducerFunction_
--   _StoreData_
+-   **_GlobalStore_**
+
+The GlobalStore class.
+
+-   **_StoreState_**
+
+An object representing the state returned from `store.state`.
+
+```TypeScript
+type StoreState = Record<string, unknown>;
+```
+
+-   **_SetStateFunctionCallback_**
+
+The callback function to be passed into `store.set()`
+
+```TypeScript
+export type SetStateFunctionCallBack = (previous: StoreState) => StoreState;
+```
+
+-   **_ReducerParam_**
+
+The `action` object of your reducer function. Must include a `type` key.
+
+-   **_ReducerFunction_**
+
+A function which should be passed into `store.addReducer()`
+
+```TypeScript
+type ReducerFunction = <T>(state: StoreState, action: ReducerParam<T>) => StoreState;
+```
+
+-   **_StoreData_**
+
+An object representing the data which is returned from `store.info`
+
+```TypeScript
+export interface StoreData {
+    sizeInBytes?: number;
+    lastModified?: string;
+    globalStoreVersion?: string;
+}
+```
+
+## License
+
+Copyright (c) 2022-present Matt Stephens
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.

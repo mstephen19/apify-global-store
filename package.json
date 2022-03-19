@@ -1,7 +1,7 @@
 {
     "name": "apify-global-store",
     "version": "1.0.9",
-    "description": "Simple global store support for Apify",
+    "description": "Intuitive global state management for Apify actors.",
     "main": "dist/index.js",
     "scripts": {
         "test": "jest"
@@ -15,7 +15,12 @@
         "scraping",
         "proxy-chain",
         "apify-context",
-        "object-path"
+        "object-path",
+        "scraper",
+        "headless",
+        "crawler",
+        "cheerio",
+        "puppeteer"
     ],
     "author": "Matt Stephens",
     "license": "MIT",
