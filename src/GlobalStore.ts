@@ -1,8 +1,9 @@
-import Apify, { Dataset } from 'apify';
+import Apify, { Dataset, KeyValueStore } from 'apify';
 import objectPath from 'object-path';
 
-import { log } from './utils';
-import { getStoreData, validateName, errorString } from './utils';
+import { getStoreData, validateName, errorString, log } from './utils';
+
+import { GLOBAL_STORE, CLOUD_GLOBAL_STORES } from './constants';
 
 import {
     State,
@@ -13,29 +14,32 @@ import {
     ReducerParam,
     InitializeOptions,
     StoreInstances,
+    StoreData,
 } from './types';
-import { StoreData } from '.';
 
 const storeInstances: StoreInstances = {};
 
 /**
- * An instance of this class must be created, followed by the initialize method, in order to use the global store.
+ * Use await `GlobalStore.init()` to get started using GlobalStore!
  */
 class GlobalStore {
     classState: State;
     readonly storeName: DefaultStoreName | string;
     reducer: ReducerFunction | null;
+    keyValueStore: KeyValueStore | typeof Apify;
 
-    private constructor(storeName: string, initialState: State) {
+    private constructor(storeName: string, initialState: State, kvStore: KeyValueStore | typeof Apify) {
         this.classState = initialState;
 
-        this.storeName = storeName || 'GLOBAL-STORE';
+        this.storeName = storeName || GLOBAL_STORE;
+
+        this.keyValueStore = kvStore;
 
         this.reducer = null;
 
         Apify.events.on('persistState', () => {
             log('Persisting store...');
-            return Apify.setValue(this.storeName, this.classState);
+            return this.keyValueStore.setValue(this.storeName, this.classState);
         });
 
         storeInstances[storeName] = this;
@@ -44,35 +48,40 @@ class GlobalStore {
     }
 
     /**
-     * @param name Name for the global store. Defaults to 'GLOBAL-STORE'
-     * @param initialState Initial state to start with. Defaults to an empty object
+     * @param initializeOptions The options for initializing the GlobalStore.
      * Initiate the global state store. GlobalStore doesn't have a public constructor function; therefore, this must be used.
      */
-    static async init({ name, initialState }: InitializeOptions = {}): Promise<GlobalStore> {
+    static async init({ name, initialState = {}, cloud = false }: InitializeOptions = {}): Promise<GlobalStore> {
         // Can only match certain characters
         if (name && validateName(name)) {
             throw new Error(errorString('Store name must not contain illegal characters! Acceptable format is "my-store-name" or "mystorename".'));
         }
 
-        const storeName = name?.toUpperCase() || 'GLOBAL-STORE';
+        const storeName = name?.toUpperCase() || GLOBAL_STORE;
 
         // Name can only be used once
         if (storeInstances[storeName.toUpperCase()]) throw new Error(errorString(`Can only use the name "${storeName}" for one global store!`));
 
+        // Initialize our state
         let state: State = { store: { ...initialState }, data: getStoreData(initialState || {}) };
 
-        const data = await Apify.getValue(storeName);
+        const kvStore = cloud ? await Apify.openKeyValueStore(CLOUD_GLOBAL_STORES, { forceCloud: true }) : Apify;
+
+        // Check if some previous state already exists. If so, grab it and replace our initialized state with that.
+        const data = await kvStore.getValue(storeName);
 
         if (!!data) state = data as State;
 
-        return new GlobalStore(storeName, state);
+        return new GlobalStore(storeName, state, kvStore);
     }
 
     /**
      *
      * @param storeName The name of the store you'd like to have returned.
      */
-    static summon(storeName: string) {
+    static summon(storeName?: string) {
+        if (!storeName) return storeInstances[GLOBAL_STORE];
+
         if (!storeInstances[storeName.toUpperCase()]) throw new Error(errorString(`Store with name ${storeName.toUpperCase()} doesn't exist!`));
         return storeInstances[storeName.toUpperCase()];
     }
@@ -137,12 +146,11 @@ class GlobalStore {
      * @param dataset Optional, provide a dataset to push to. If not provided, the default dataset will be used.
      */
     async pushPathToDataset(path: string, dataset?: Dataset) {
-        let value: Record<string, unknown> | [];
-        try {
-            value = objectPath.get(this.classState.store, path);
-        } catch (err) {
-            throw new Error(errorString(`Path ${path} not found within store: ${err}`));
-        }
+        const value: Record<string, unknown> | Record<string, unknown>[] = objectPath.get(this.classState.store, path);
+
+        if (!value) throw new Error(errorString(`Path ${path} not found within store`));
+
+        if (typeof value !== 'object') throw new Error(errorString(`Can only push objects or arrays! Trying to push ${typeof value}`));
 
         objectPath.del(this.classState.store, path);
 
@@ -156,6 +164,13 @@ class GlobalStore {
     dump() {
         log(`Dumping entire store: ${this.storeName}`);
         this.classState = { store: {}, data: getStoreData({}) };
+    }
+
+    /**
+     * If saving on every "persistState" event is not enough, use "forceSave" to instantly save the GlobalStore to the Key-Value Store.
+     */
+    async forceSave() {
+        return this.keyValueStore.setValue(this.storeName, this.classState);
     }
 }
 

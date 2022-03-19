@@ -8,5 +8,6 @@
         "declarationMap": false,
         "lib": ["es5", "es6", "dom", "dom.iterable"]
     },
-    "include": ["./src/**/*"]
+    "include": ["./src/**/*"],
+    "exclude": ["./src/tests/**"]
 }

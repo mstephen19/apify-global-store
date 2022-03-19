@@ -3,6 +3,7 @@ export declare type StoreState = Record<string, unknown>;
 export interface InitializeOptions {
     name?: string;
     initialState?: Record<string, unknown>;
+    cloud?: boolean;
 }
 export interface StoreData {
     sizeInBytes?: number;

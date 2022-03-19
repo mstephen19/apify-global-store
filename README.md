@@ -19,6 +19,7 @@
     -   [`store.set()`](#storeset)
     -   [`await store.pushPathToDataset()`](#await-storepushpathtodataset)
     -   [`store.dump()`](#storedump)
+    -   [`await store.forceSave()`](#await-storeforcesave)
     -   [`GlobalStore.summon()`](#globalstoresummon)
     -   [`GlobalStore.summonAll()`](#globalstoresummonall)
     -   [Best practices with store namagement](#best-practices-with-store-management)
@@ -92,9 +93,17 @@ Apify.main(async () => {
 
 (initializeOptions: _InitializeOptions_) => `Promise<GlobalStore>`
 
-| Argument          | Type              | Required | Description                                                 |
-| ----------------- | ----------------- | -------- | ----------------------------------------------------------- |
-| initializeOptions | InitializeOptions | false    | `{ name?: string, initialState?: Record<string, unknown> }` |
+| Argument          | Type              | Required | Description                                                             |
+| ----------------- | ----------------- | -------- | ----------------------------------------------------------------------- |
+| initializeOptions | InitializeOptions | false    | Configure the store's name, its initial state, and where it is located. |
+
+```TypeScript
+interface InitializeOptions {
+    name?: string; // The name of the store to use
+    initialState?: Record<string, unknown>; // The initial state to start with
+    cloud?: boolean; // Whether or not to keep the store on the cloud, or locally to the actor's run
+}
+```
 
 `GlobalStore` doesn't have a public constructor. Its `init()` method runs necessary asynchronous tasks prior to calling on its private constructor.
 
@@ -104,9 +113,11 @@ Apify.main(async () => {
 const store = await GlobalStore.init({ name: 'hello-world' });
 ```
 
+If the store already has a previous state stored within the Key-Value store (in the situation that a migration/abort occurred), then the `initialState` option will have no effect.
+
 You can only pass letters and "-" within the string, otherwise an error will be thrown (to follow naming conventions). The provided store name will _always_ be forced into uppercase.
 
-> **Note:** A name for a store can only be used once. That includes the default name of `GLOBAL-STORE`.
+> **Note:** A name for a store can only be used once. That includes the default name of `GLOBAL-STORE`. If the `cloud` option is set to true, then the global store will be stored in the cloud on your Apify account under "Storages" within a named Key-Value store called `CLOUD-GLOBAL-STORES`.
 
 ### `store.state`
 
@@ -129,7 +140,8 @@ An object containing information about the contents of the store. Example:
 ```JavaScript
 {
     sizeInBytes: 17,
-    lastModified: '2022-03-18T15:39:45.041Z'
+    lastModified: '2022-03-18T15:39:45.041Z',
+    globalStoreVersion: '1.0.9'
 }
 ```
 
@@ -181,17 +193,25 @@ await store.pushPathToDataset(`products.${productId}.reviews.${reviewId}`)
 
 Completely empty the entire contents of the store.
 
+### `await store.forceSave()`
+
+() => `Promise<void>`
+
+The store's data is saved to the Key-Value Store every single time the "persistState" event is fired. It can also be forced to be saved instantly with this method.
+
 ### `GlobalStore.summon()`
 
 (storeName: _string_) => `GlobalStore`
 
 | Argument  | Type   | Required | Description                      |
 | --------- | ------ | -------- | -------------------------------- |
-| storeName | string | **true** | The name of the store to summon. |
+| storeName | string | **false** | The name of the store to summon. |
 
 A static method which returns the instance of the store attached to the name provided. A useful and simple aternative to passing a store instance around a parameter.
 
 You are _not_ required to provide the uppercase version of the store name in the `storeName` parameter. It is automatically done for you.
+
+If you do not provide a store name, then the default store `GLOBAL-STORE` will be summoned.
 
 **Usage:**
 
@@ -231,6 +251,8 @@ const store = await GlobalStore.init({ name: storeNames.PRODUCTS })
 
 ### `store.addReducer()`
 
+(reducerFn: _ReducerFunction_) => `void`
+
 | Argument  | Type            | Required | Description                                                             |
 | --------- | --------------- | -------- | ----------------------------------------------------------------------- |
 | reducerFn | ReducerFunction | **true** | A custom reducer function which takes (state, action) as its arguments. |
@@ -240,6 +262,7 @@ When you find yourself writing the same code over and over again using the `stor
 **Usage:**
 
 ```JavaScript
+// the "action" parameter is expected to have a "type" property
 const reducer = (state, action) => {
     switch(action.type) {
         default:
@@ -258,6 +281,8 @@ store.addReducer(reducer);
 > **Note:** Only _one_ reducer can be added to a store instance. Trying to add a second one will result in an error.
 
 ### `store.setWithReducer()`
+
+(action: _ReducerAction_) => `void`
 
 | Argument | Type          | Required | Description                                    |
 | -------- | ------------- | -------- | ---------------------------------------------- |
