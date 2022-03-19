@@ -2,19 +2,28 @@ import Apify, { Dataset } from 'apify';
 import objectPath from 'object-path';
 
 import { log } from './utils';
-import { getStoreData } from './utils';
+import { getStoreData, validateName, errorString } from './utils';
 
-import { State, SetStateFunctionCallBack, DefaultStoreName, StoreState, ReducerFunction, ReducerParam, InitializeOptions } from './types';
+import {
+    State,
+    SetStateFunctionCallBack,
+    DefaultStoreName,
+    StoreState,
+    ReducerFunction,
+    ReducerParam,
+    InitializeOptions,
+    StoreInstances,
+} from './types';
 import { StoreData } from '.';
 
-const storeInstances: Record<string, GlobalStore> = {};
+const storeInstances: StoreInstances = {};
 
 /**
  * An instance of this class must be created, followed by the initialize method, in order to use the global store.
  */
 class GlobalStore {
     classState: State;
-    storeName: DefaultStoreName | string;
+    readonly storeName: DefaultStoreName | string;
     reducer: ReducerFunction | null;
 
     private constructor(storeName: string, initialState: State) {
@@ -35,27 +44,26 @@ class GlobalStore {
     }
 
     /**
-     * @param customName Name for the global store. Defaults to 'GLOBAL-STORE'
+     * @param name Name for the global store. Defaults to 'GLOBAL-STORE'
      * @param initialState Initial state to start with. Defaults to an empty object
      * Initiate the global state store. GlobalStore doesn't have a public constructor function; therefore, this must be used.
      */
-    static async init({ customName, initialState }: InitializeOptions = {}): Promise<GlobalStore> {
+    static async init({ name, initialState }: InitializeOptions = {}): Promise<GlobalStore> {
         // Can only match certain characters
-        if (customName && customName.match(/[`!@#$%^&*()_+\=\[\]{};':"\\|,.<>\/?~]/)) {
-            throw new Error('Custom store name must not contain illegal characters! Acceptable format is "my-store-name" or "mystorename".');
+        if (name && validateName(name)) {
+            throw new Error(errorString('Store name must not contain illegal characters! Acceptable format is "my-store-name" or "mystorename".'));
         }
 
-        const storeName = customName?.toUpperCase() || 'GLOBAL-STORE';
+        const storeName = name?.toUpperCase() || 'GLOBAL-STORE';
 
         // Name can only be used once
-        if (storeInstances[storeName.toUpperCase()]) throw new Error(`Can only use the name "${storeName}" for one global store!`);
+        if (storeInstances[storeName.toUpperCase()]) throw new Error(errorString(`Can only use the name "${storeName}" for one global store!`));
 
-        let state: State = { store: {}, data: {} };
+        let state: State = { store: { ...initialState }, data: getStoreData(initialState || {}) };
 
         const data = await Apify.getValue(storeName);
 
         if (!!data) state = data as State;
-        if (!data) state = { store: { ...initialState }, data: getStoreData(initialState || {}) };
 
         return new GlobalStore(storeName, state);
     }
@@ -65,20 +73,27 @@ class GlobalStore {
      * @param storeName The name of the store you'd like to have returned.
      */
     static summon(storeName: string) {
-        if (!storeInstances[storeName.toUpperCase()]) throw new Error(`Store with name ${storeName.toUpperCase()} doesn't exist!`);
+        if (!storeInstances[storeName.toUpperCase()]) throw new Error(errorString(`Store with name ${storeName.toUpperCase()} doesn't exist!`));
         return storeInstances[storeName.toUpperCase()];
     }
 
     /**
+     * Return an object containing all instances of GlobalStore. Each key pertains to the store's name.
+     */
+    static summonAll(): StoreInstances {
+        return storeInstances;
+    }
+
+    /**
      *
-     * Retrieve the current state. Can also be done with storeInstance.state (not called as a function).
+     * Retrieve the current state object of the store.
      */
     get state(): StoreState {
         return this.classState.store;
     }
 
     /**
-     * Get various info about the store.
+     * Get various information about the store.
      */
     get info(): StoreData {
         return this.classState.data;
@@ -100,7 +115,7 @@ class GlobalStore {
      * @param reducerFn Self-defined reducer function taking the parameters of (state, action) - state is the previous state which is automatically passed in
      */
     addReducer(reducerFn: ReducerFunction) {
-        if (this.reducer) throw new Error('This store already has a reducer function!');
+        if (this.reducer) throw new Error(errorString('This store already has a reducer function!'));
         this.reducer = reducerFn;
     }
 
@@ -109,7 +124,7 @@ class GlobalStore {
      * @param action Your self-defined action when using the addReducer function
      */
     setWithReducer<T>(action: ReducerParam<T>) {
-        if (!this.reducer) throw new Error('No reducer function was passed using the "addReducer" method!');
+        if (!this.reducer) throw new Error(errorString('No reducer function was passed using the "addReducer" method!'));
 
         const newState = this.reducer(this.classState.store, action);
 
@@ -126,7 +141,7 @@ class GlobalStore {
         try {
             value = objectPath.get(this.classState.store, path);
         } catch (err) {
-            throw new Error(`Path ${path} not found within store: ${err}`);
+            throw new Error(errorString(`Path ${path} not found within store: ${err}`));
         }
 
         objectPath.del(this.classState.store, path);

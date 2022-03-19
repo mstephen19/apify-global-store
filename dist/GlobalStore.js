@@ -36,25 +36,26 @@ class GlobalStore {
         storeInstances[storeName] = this;
         (0, utils_1.log)(`Store initialized with name: ${storeName}`);
     }
-    static async init({ customName, initialState } = {}) {
-        if (customName && customName.match(/[`!@#$%^&*()_+\=\[\]{};':"\\|,.<>\/?~]/)) {
-            throw new Error('Custom store name must not contain illegal characters! Acceptable format is "my-store-name" or "mystorename".');
+    static async init({ name, initialState } = {}) {
+        if (name && (0, utils_2.validateName)(name)) {
+            throw new Error((0, utils_2.errorString)('Store name must not contain illegal characters! Acceptable format is "my-store-name" or "mystorename".'));
         }
-        const storeName = (customName === null || customName === void 0 ? void 0 : customName.toUpperCase()) || 'GLOBAL-STORE';
+        const storeName = (name === null || name === void 0 ? void 0 : name.toUpperCase()) || 'GLOBAL-STORE';
         if (storeInstances[storeName.toUpperCase()])
-            throw new Error(`Can only use the name "${storeName}" for one global store!`);
-        let state = { store: {}, data: {} };
+            throw new Error((0, utils_2.errorString)(`Can only use the name "${storeName}" for one global store!`));
+        let state = { store: { ...initialState }, data: (0, utils_2.getStoreData)(initialState || {}) };
         const data = await apify_1.default.getValue(storeName);
         if (!!data)
             state = data;
-        if (!data)
-            state = { store: { ...initialState }, data: (0, utils_2.getStoreData)(initialState || {}) };
         return new GlobalStore(storeName, state);
     }
     static summon(storeName) {
         if (!storeInstances[storeName.toUpperCase()])
-            throw new Error(`Store with name ${storeName.toUpperCase()} doesn't exist!`);
+            throw new Error((0, utils_2.errorString)(`Store with name ${storeName.toUpperCase()} doesn't exist!`));
         return storeInstances[storeName.toUpperCase()];
+    }
+    static summonAll() {
+        return storeInstances;
     }
     get state() {
         return this.classState.store;
@@ -69,12 +70,12 @@ class GlobalStore {
     }
     addReducer(reducerFn) {
         if (this.reducer)
-            throw new Error('This store already has a reducer function!');
+            throw new Error((0, utils_2.errorString)('This store already has a reducer function!'));
         this.reducer = reducerFn;
     }
     setWithReducer(action) {
         if (!this.reducer)
-            throw new Error('No reducer function was passed using the "addReducer" method!');
+            throw new Error((0, utils_2.errorString)('No reducer function was passed using the "addReducer" method!'));
         const newState = this.reducer(this.classState.store, action);
         this.classState = { store: { ...newState }, data: (0, utils_2.getStoreData)(newState) };
     }
@@ -84,7 +85,7 @@ class GlobalStore {
             value = object_path_1.default.get(this.classState.store, path);
         }
         catch (err) {
-            throw new Error(`Path ${path} not found within store: ${err}`);
+            throw new Error((0, utils_2.errorString)(`Path ${path} not found within store: ${err}`));
         }
         object_path_1.default.del(this.classState.store, path);
         if (!dataset)

@@ -1,13 +1,16 @@
+import GlobalStore from './GlobalStore';
+
 export type StoreState = Record<string, unknown>;
 
 export interface InitializeOptions {
-    customName?: string;
+    name?: string;
     initialState?: Record<string, unknown>;
 }
 
 export interface StoreData {
     sizeInBytes?: number;
     lastModified?: string;
+    globalStoreVersion?: string;
 }
 export interface State {
     store: StoreState;
@@ -25,3 +28,5 @@ export type SetStateFunctionCallBack = (previous: StoreState) => StoreState;
 export type DefaultStoreName = 'GLOBAL-STORE';
 
 export type ReducerFunction = <T>(state: StoreState, action: ReducerParam<T>) => StoreState;
+
+export type StoreInstances = Record<string, GlobalStore>;
