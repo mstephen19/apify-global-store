@@ -192,4 +192,24 @@ describe('GlobalStore', () => {
             expect(summoned.state).toEqual({ hello: 'world', hey: 'again', heyaa: 'again' });
         });
     });
+
+    describe('deletePath', () => {
+        it('Should delete the path from the store', async () => {
+            const store = await GlobalStore.init({ name: 'test-store-abc' });
+
+            store.set((prev) => {
+                return {
+                    ...prev,
+                    hello: 'world',
+                    test: {
+                        abc: 'hi',
+                    },
+                };
+            });
+
+            store.deletePath('test.abc');
+
+            expect(store.state).toEqual({ hello: 'world', test: {} });
+        });
+    });
 });

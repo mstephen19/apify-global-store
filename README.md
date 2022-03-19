@@ -19,9 +19,10 @@
     -   [`store.set()`](#storeset)
     -   [`await store.pushPathToDataset()`](#await-storepushpathtodataset)
     -   [`store.dump()`](#storedump)
-    -   [`await store.forceSave()`](#await-storeforcesave)
     -   [`GlobalStore.summon()`](#globalstoresummon)
     -   [`GlobalStore.summonAll()`](#globalstoresummonall)
+    -   [`await store.forceSave()`](#await-storeforcesave)
+    -   [`store.deletePath()`](#storedeletepath)
     -   [Best practices with store namagement](#best-practices-with-store-management)
 -   [Advanced Usage](#advanced-usage)
     -   [`store.addReducer()`](#storeaddreducer)
@@ -91,11 +92,11 @@ Apify.main(async () => {
 
 ### `await GlobalStore.init()`
 
-(initializeOptions: _InitializeOptions_) => `Promise<GlobalStore>`
+(**initializeOptions**: _InitializeOptions_) => `Promise<GlobalStore>`
 
-| Argument          | Type              | Required | Description                                                             |
-| ----------------- | ----------------- | -------- | ----------------------------------------------------------------------- |
-| initializeOptions | InitializeOptions | false    | Configure the store's name, its initial state, and where it is located. |
+| Argument          | Type              | Required  | Description                                                             |
+| ----------------- | ----------------- | --------- | ----------------------------------------------------------------------- |
+| initializeOptions | InitializeOptions | **false** | Configure the store's name, its initial state, and where it is located. |
 
 ```TypeScript
 interface InitializeOptions {
@@ -147,7 +148,7 @@ An object containing information about the contents of the store. Example:
 
 ### `store.set()`
 
-(setStateParam: _SetStateFunctionCallBack_) => `void`
+(**setStateParam**: _SetStateFunctionCallBack_) => `void`
 
 | Argument      | Type                     | Required | Description                                                                                                                                      |
 | ------------- | ------------------------ | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
@@ -170,11 +171,11 @@ store.set((prev) => {
 
 ### `await store.pushPathToDataset()`
 
-(path: _string_, dataset: _Dataset_) => `Promise<void>`
+(**path**: _string_, **dataset**: _Dataset_) => `Promise<void>`
 
 | Argument | Type    | Required  | Description                                                                      |
 | -------- | ------- | --------- | -------------------------------------------------------------------------------- |
-| path     | string  | **true**  | A string version of the path you'd like to push within the state.                |
+| path     | string  | **true**  | A string version of the path within the state you'd like to push to the dataset. |
 | dataset  | Dataset | **false** | The dataset to push to. If not provided a dataset, the default one will be used. |
 
 Push some data from the store into the specified dataset (or into the default one), then automatically delete it from the store after it's been pushed.
@@ -193,18 +194,12 @@ await store.pushPathToDataset(`products.${productId}.reviews.${reviewId}`)
 
 Completely empty the entire contents of the store.
 
-### `await store.forceSave()`
-
-() => `Promise<void>`
-
-The store's data is saved to the Key-Value Store every single time the "persistState" event is fired. It can also be forced to be saved instantly with this method.
-
 ### `GlobalStore.summon()`
 
-(storeName: _string_) => `GlobalStore`
+(**storeName**: _string_) => `GlobalStore`
 
-| Argument  | Type   | Required | Description                      |
-| --------- | ------ | -------- | -------------------------------- |
+| Argument  | Type   | Required  | Description                      |
+| --------- | ------ | --------- | -------------------------------- |
 | storeName | string | **false** | The name of the store to summon. |
 
 A static method which returns the instance of the store attached to the name provided. A useful and simple aternative to passing a store instance around a parameter.
@@ -229,6 +224,12 @@ console.log(summoned.state) // => {}
 
 Similar to `summon`, but returns the entire `storeInstances` object, which is a map of all instances of GlobalStore.
 
+### `await store.forceSave()`
+
+() => `Promise<void>`
+
+The store's data is saved to the Key-Value Store every single time the "persistState" event is fired. It can also be forced to be saved instantly with this method.
+
 ### Best practices with store namagement
 
 When using more than one instance of GlobalStore, it is best to use custom store names, and to put them into a constant:
@@ -247,11 +248,21 @@ import { storeNames } from './consts'
 const store = await GlobalStore.init({ name: storeNames.PRODUCTS })
 ```
 
+### `store.deletePath()`
+
+(**path**: _string_) => `Promise<void>`
+
+| Argument | Type   | Required | Description                                                         |
+| -------- | ------ | -------- | ------------------------------------------------------------------- |
+| path     | string | **true** | A string version of the path within the state you'd like to delete. |
+
+> **Note:** This method works similar to `store.pushPathToDataset()`, except it does not push the data to the dataset prior to deleting it from the state.
+
 ## Advanced usage
 
 ### `store.addReducer()`
 
-(reducerFn: _ReducerFunction_) => `void`
+(**reducerFn**: _ReducerFunction_) => `void`
 
 | Argument  | Type            | Required | Description                                                             |
 | --------- | --------------- | -------- | ----------------------------------------------------------------------- |
@@ -264,16 +275,20 @@ When you find yourself writing the same code over and over again using the `stor
 ```JavaScript
 // the "action" parameter is expected to have a "type" property
 const reducer = (state, action) => {
-    switch(action.type) {
+    switch (action.type) {
         default:
             return state;
         case 'ADD-PRODUCT-REVIEW':
             return {
                 ...state,
-                products: { ...state.products, [action.productId]: { ...state[action.productId], reviews: [...state[action.productId.reviews], ...action.payload] } }
-            }
+                products: {
+                    ...state.products,
+                    [action.productId]: { ...state[action.productId], reviews: [...state[action.productId.reviews], ...action.payload] },
+                },
+            };
     }
 };
+
 
 store.addReducer(reducer);
 ```
@@ -282,11 +297,11 @@ store.addReducer(reducer);
 
 ### `store.setWithReducer()`
 
-(action: _ReducerAction_) => `void`
+(**action**: _ReducerAction_) => `void`
 
 | Argument | Type          | Required | Description                                    |
 | -------- | ------------- | -------- | ---------------------------------------------- |
-| action   | ReducerAction | true     | Use your reducer function to modify the state. |
+| action   | ReducerAction | **true** | Use your reducer function to modify the state. |
 
 **Usage:**
 

@@ -37,7 +37,7 @@ class GlobalStore {
         this.keyValueStore = kvStore;
         this.reducer = null;
         apify_1.default.events.on('persistState', () => {
-            (0, utils_1.log)('Persisting store...');
+            (0, utils_1.log)(`Persisting store ${this.storeName}...`);
             return this.keyValueStore.setValue(this.storeName, this.classState);
         });
         storeInstances[storeName] = this;
@@ -88,6 +88,12 @@ class GlobalStore {
             throw new Error((0, utils_1.errorString)('No reducer function was passed using the "addReducer" method!'));
         const newState = this.reducer(this.classState.store, action);
         this.classState = { store: { ...newState }, data: (0, utils_1.getStoreData)(newState) };
+    }
+    deletePath(path) {
+        const value = object_path_1.default.get(this.classState.store, path);
+        if (!value)
+            throw new Error((0, utils_1.errorString)(`Path ${path} not found within store`));
+        object_path_1.default.del(this.classState.store, path);
     }
     async pushPathToDataset(path, dataset) {
         const value = object_path_1.default.get(this.classState.store, path);

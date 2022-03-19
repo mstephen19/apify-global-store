@@ -14,6 +14,7 @@ declare class GlobalStore {
     set(setStateParam: SetStateFunctionCallBack): void;
     addReducer(reducerFn: ReducerFunction): void;
     setWithReducer<T>(action: ReducerParam<T>): void;
+    deletePath(path: string): void;
     pushPathToDataset(path: string, dataset?: Dataset): Promise<void>;
     dump(): void;
     forceSave(): Promise<void>;

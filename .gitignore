@@ -1,2 +1,4 @@
 node_modules
 dist
+apify_storage
+.DS_Store

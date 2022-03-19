@@ -38,7 +38,7 @@ class GlobalStore {
         this.reducer = null;
 
         Apify.events.on('persistState', () => {
-            log('Persisting store...');
+            log(`Persisting store ${this.storeName}...`);
             return this.keyValueStore.setValue(this.storeName, this.classState);
         });
 
@@ -69,7 +69,6 @@ class GlobalStore {
 
         // Check if some previous state already exists. If so, grab it and replace our initialized state with that.
         const data = await kvStore.getValue(storeName);
-
         if (!!data) state = data as State;
 
         return new GlobalStore(storeName, state, kvStore);
@@ -138,6 +137,14 @@ class GlobalStore {
         const newState = this.reducer(this.classState.store, action);
 
         this.classState = { store: { ...newState }, data: getStoreData(newState) };
+    }
+
+    deletePath(path: string) {
+        const value: Record<string, unknown> | Record<string, unknown>[] = objectPath.get(this.classState.store, path);
+
+        if (!value) throw new Error(errorString(`Path ${path} not found within store`));
+
+        objectPath.del(this.classState.store, path);
     }
 
     /**
