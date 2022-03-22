@@ -89,11 +89,18 @@ class GlobalStore {
         const newState = this.reducer(this.classState.store, action);
         this.classState = { store: { ...newState }, data: (0, utils_1.getStoreData)(newState) };
     }
+    setPath(path, value) {
+        const store = { ...this.classState.store };
+        object_path_1.default.set(store, path, value);
+        this.classState = { store, data: (0, utils_1.getStoreData)(store) };
+    }
     deletePath(path) {
         const value = object_path_1.default.get(this.classState.store, path);
         if (!value)
             throw new Error((0, utils_1.errorString)(`Path ${path} not found within store`));
-        object_path_1.default.del(this.classState.store, path);
+        const store = { ...this.classState.store };
+        object_path_1.default.del(store, path);
+        this.classState = { store, data: (0, utils_1.getStoreData)(store) };
     }
     async pushPathToDataset(path, dataset) {
         const value = object_path_1.default.get(this.classState.store, path);
@@ -101,10 +108,18 @@ class GlobalStore {
             throw new Error((0, utils_1.errorString)(`Path ${path} not found within store`));
         if (typeof value !== 'object')
             throw new Error((0, utils_1.errorString)(`Can only push objects or arrays! Trying to push ${typeof value}`));
-        object_path_1.default.del(this.classState.store, path);
-        if (!dataset)
-            return apify_1.default.pushData(value);
-        return dataset.pushData(value);
+        try {
+            if (!dataset)
+                return apify_1.default.pushData(value);
+            if (dataset)
+                return dataset.pushData(value);
+        }
+        catch (err) {
+            throw new Error((0, utils_1.errorString)(`Failed to push to the dataset!: ${err}`));
+        }
+        const store = { ...this.classState.store };
+        object_path_1.default.del(store, path);
+        this.classState = { store, data: (0, utils_1.getStoreData)(store) };
     }
     dump() {
         (0, utils_1.log)(`Dumping entire store: ${this.storeName}`);

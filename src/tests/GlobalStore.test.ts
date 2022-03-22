@@ -212,4 +212,19 @@ describe('GlobalStore', () => {
             expect(store.state).toEqual({ hello: 'world', test: {} });
         });
     });
+
+    describe('setPath', () => {
+        it('Should set the path in the store to the specified value', async () => {
+            const store = await GlobalStore.init({ name: 'my-test-store-hi' });
+
+            store.setPath('hello.world', [1, 2, 3]);
+
+            expect(store.state).toHaveProperty('hello');
+
+            const { hello } = store.state;
+
+            expect(hello).toHaveProperty('world');
+            expect(typeof hello).toEqual('object');
+        });
+    });
 });

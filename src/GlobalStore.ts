@@ -131,7 +131,7 @@ class GlobalStore {
      *
      * @param action Your self-defined action when using the addReducer function
      */
-    setWithReducer<T>(action: ReducerParam<T>) {
+    setWithReducer<T extends unknown>(action: ReducerParam<T>) {
         if (!this.reducer) throw new Error(errorString('No reducer function was passed using the "addReducer" method!'));
 
         const newState = this.reducer(this.classState.store, action);
@@ -139,12 +139,33 @@ class GlobalStore {
         this.classState = { store: { ...newState }, data: getStoreData(newState) };
     }
 
+    /**
+     *
+     * @param path The path to set/replace within the store
+     * @param value The value to set
+     */
+    setPath(path: string, value: unknown) {
+        const store = { ...this.classState.store };
+
+        objectPath.set(store, path, value);
+
+        this.classState = { store, data: getStoreData(store) };
+    }
+
+    /**
+     *
+     * @param path A string version of the path within the state that you'd like to delete
+     */
     deletePath(path: string) {
         const value: Record<string, unknown> | Record<string, unknown>[] = objectPath.get(this.classState.store, path);
 
         if (!value) throw new Error(errorString(`Path ${path} not found within store`));
 
-        objectPath.del(this.classState.store, path);
+        const store = { ...this.classState.store };
+
+        objectPath.del(store, path);
+
+        this.classState = { store, data: getStoreData(store) };
     }
 
     /**
@@ -159,10 +180,18 @@ class GlobalStore {
 
         if (typeof value !== 'object') throw new Error(errorString(`Can only push objects or arrays! Trying to push ${typeof value}`));
 
-        objectPath.del(this.classState.store, path);
+        try {
+            if (!dataset) return Apify.pushData(value);
+            if (dataset) return dataset.pushData(value);
+        } catch (err) {
+            throw new Error(errorString(`Failed to push to the dataset!: ${err}`));
+        }
 
-        if (!dataset) return Apify.pushData(value);
-        return dataset.pushData(value);
+        const store = { ...this.classState.store };
+
+        objectPath.del(store, path);
+
+        this.classState = { store, data: getStoreData(store) };
     }
 
     /**

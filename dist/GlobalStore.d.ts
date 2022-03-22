@@ -13,7 +13,8 @@ declare class GlobalStore {
     get info(): StoreData;
     set(setStateParam: SetStateFunctionCallBack): void;
     addReducer(reducerFn: ReducerFunction): void;
-    setWithReducer<T>(action: ReducerParam<T>): void;
+    setWithReducer<T extends unknown>(action: ReducerParam<T>): void;
+    setPath(path: string, value: unknown): void;
     deletePath(path: string): void;
     pushPathToDataset(path: string, dataset?: Dataset): Promise<void>;
     dump(): void;

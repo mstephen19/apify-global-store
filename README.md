@@ -22,6 +22,7 @@
     -   [`GlobalStore.summon()`](#globalstoresummon)
     -   [`GlobalStore.summonAll()`](#globalstoresummonall)
     -   [`await store.forceSave()`](#await-storeforcesave)
+    -   [`store.setPath()`](#storesetpath)
     -   [`store.deletePath()`](#storedeletepath)
     -   [Best practices with store management](#best-practices-with-store-management)
 -   [Advanced Usage](#advanced-usage)
@@ -205,7 +206,7 @@ Completely empty the entire contents of the store.
 
 A static method which returns the instance of the store attached to the name provided. A useful and simple aternative to passing a store instance around a parameter.
 
-You are _not_ required to provide the uppercase version of the store name in the `storeName` parameter. It is automatically done for you.
+You are **_not_** required to provide the uppercase version of the store name in the `storeName` parameter. It is automatically done for you.
 
 If you do not provide a store name, then the default store `GLOBAL-STORE` will be summoned.
 
@@ -231,6 +232,37 @@ Similar to `summon`, but returns the entire `storeInstances` object, which is a 
 
 The store's data is saved to the Key-Value Store every single time the "persistState" event is fired. It can also be forced to be saved instantly with this method.
 
+### `store.setPath()`
+
+(**path**: _string_, **value**: _unknown_) => `void`
+
+| Argument | Type    | Required | Description                                                              |
+| -------- | ------- | -------- | ------------------------------------------------------------------------ |
+| path     | string  | **true** | A string version of the path within the state you'd like to set/replace. |
+| value    | unknown | **true** | The value you'd like to set.                                             |
+
+**Usage:**
+
+```JavaScript
+store.setPath(`products.${productId}.reviews`, reviewsObject)
+```
+
+### `store.deletePath()`
+
+(**path**: _string_) => `void`
+
+| Argument | Type   | Required | Description                                                         |
+| -------- | ------ | -------- | ------------------------------------------------------------------- |
+| path     | string | **true** | A string version of the path within the state you'd like to delete. |
+
+**Usage:**
+
+```JavaScript
+store.setPath(`products.${productId}.reviews`)
+```
+
+> **Note:** This method works similar to `store.pushPathToDataset()`, except it does not push the data to the dataset prior to deleting it from the state.
+
 ### Best practices with store management
 
 When using more than one instance of GlobalStore, it is best to use custom store names, and to put them into a constant:
@@ -252,16 +284,6 @@ const hotelStore = await GlobalStore.init({name: storeNames.HOTELS});
 
 const summoned = GlobalStore.summon(storeNames.HOTELS);
 ```
-
-### `store.deletePath()`
-
-(**path**: _string_) => `Promise<void>`
-
-| Argument | Type   | Required | Description                                                         |
-| -------- | ------ | -------- | ------------------------------------------------------------------- |
-| path     | string | **true** | A string version of the path within the state you'd like to delete. |
-
-> **Note:** This method works similar to `store.pushPathToDataset()`, except it does not push the data to the dataset prior to deleting it from the state.
 
 ## Advanced usage
 
