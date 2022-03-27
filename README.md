@@ -105,6 +105,7 @@ interface InitializeOptions {
     name?: string; // The name of the store to use
     initialState?: Record<string, unknown>; // The initial state to start with
     cloud?: boolean; // Whether or not to keep the store on the cloud, or locally to the actor's run
+    debug?: boolean; // Whether or not to display helpful debug messages
 }
 ```
 

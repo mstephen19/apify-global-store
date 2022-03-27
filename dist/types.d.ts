@@ -4,6 +4,7 @@ export interface InitializeOptions {
     name?: string;
     initialState?: Record<string, unknown>;
     cloud?: boolean;
+    debug?: boolean;
 }
 export interface StoreData {
     sizeInBytes?: number;

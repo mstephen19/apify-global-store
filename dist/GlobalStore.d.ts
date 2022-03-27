@@ -1,12 +1,14 @@
-import Apify, { Dataset, KeyValueStore } from 'apify';
-import { State, SetStateFunctionCallBack, DefaultStoreName, StoreState, ReducerFunction, ReducerParam, InitializeOptions, StoreInstances, StoreData } from './types';
+import { Dataset } from 'apify';
+import { SetStateFunctionCallBack, DefaultStoreName, StoreState, ReducerFunction, ReducerParam, InitializeOptions, StoreInstances, StoreData } from './types';
 declare class GlobalStore {
-    classState: State;
+    private classState;
     readonly storeName: DefaultStoreName | string;
-    reducer: ReducerFunction | null;
-    keyValueStore: KeyValueStore | typeof Apify;
+    private reducer;
+    private keyValueStore;
+    readonly debug: boolean;
+    private log;
     private constructor();
-    static init({ name, initialState, cloud }?: InitializeOptions): Promise<GlobalStore>;
+    static init({ name, initialState, cloud, debug }?: InitializeOptions): Promise<GlobalStore>;
     static summon(storeName?: string): GlobalStore;
     static summonAll(): StoreInstances;
     get state(): StoreState;

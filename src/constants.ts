@@ -1,3 +1,3 @@
-export const GLOBAL_STORE = 'GLOBAL-STORE'
-export const CLOUD_GLOBAL_STORES = 'CLOUD-GLOBAL-STORES'
-export const CURRENT_VERSION = '1.1.0'
+export const GLOBAL_STORE = 'GLOBAL-STORE';
+export const CLOUD_GLOBAL_STORES = 'CLOUD-GLOBAL-STORES';
+export const CURRENT_VERSION = '1.1.1';
