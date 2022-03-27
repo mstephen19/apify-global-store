@@ -29,6 +29,7 @@ class GlobalStore {
     private keyValueStore: KeyValueStore | typeof Apify;
     readonly debug: boolean;
     private log: Logger;
+    readonly isCloud: boolean;
 
     private constructor(storeName: string, initialState: State, kvStore: KeyValueStore | typeof Apify, debug: boolean) {
         this.classState = initialState;
@@ -42,6 +43,8 @@ class GlobalStore {
         this.debug = debug ?? false;
 
         this.log = new Logger(debug, this.storeName);
+
+        this.isCloud = this.keyValueStore !== Apify;
 
         Apify.events.on('persistState', () => {
             this.log.general(`Persisting store ${this.storeName}...`);
@@ -69,7 +72,7 @@ class GlobalStore {
         if (storeInstances[storeName.toUpperCase()]) throw new Error(errorString(`Can only use the name "${storeName}" for one global store!`));
 
         // Initialize our state
-        let state: State = { store: { ...initialState }, data: getStoreData(initialState || {}) };
+        let state: State = { store: { ...initialState }, data: getStoreData(initialState || {}, cloud) };
 
         const kvStore = cloud ? await Apify.openKeyValueStore(CLOUD_GLOBAL_STORES, { forceCloud: true }) : Apify;
 
@@ -125,7 +128,7 @@ class GlobalStore {
         this.log.debug('Updating state...');
         const newStoreStateValue = { ...setStateParam(this.classState.store) };
 
-        const newState = { store: newStoreStateValue, data: getStoreData(newStoreStateValue) };
+        const newState = { store: newStoreStateValue, data: getStoreData(newStoreStateValue, this.isCloud) };
 
         this.log.debug('Setting new class state...');
         this.classState = newState;
@@ -145,7 +148,7 @@ class GlobalStore {
 
     /**
      * Set the state using your custom reducer function.
-     * 
+     *
      * @param action Your self-defined action when using the `store.addReducer()` method.
      */
     setWithReducer<T extends unknown>(action: ReducerParam<T>) {
@@ -157,12 +160,12 @@ class GlobalStore {
         const newState = this.reducer(this.classState.store, action);
 
         this.log.debug('Replacing class state with new state...');
-        this.classState = { store: { ...newState }, data: getStoreData(newState) };
+        this.classState = { store: { ...newState }, data: getStoreData(newState, this.isCloud) };
     }
 
     /**
      * Set a specific path within the state to avoid usage of verbose spread operators in `set` and `setWithReducer`
-     * 
+     *
      * @param path The path to set/replace within the store
      * @param value The value to set
      */
@@ -173,12 +176,12 @@ class GlobalStore {
         objectPath.set(store, path, value);
 
         this.log.debug('Replacing class state with new state...');
-        this.classState = { store, data: getStoreData(store) };
+        this.classState = { store, data: getStoreData(store, this.isCloud) };
     }
 
     /**
      * Manually delete a specific path's value within the store.
-     * 
+     *
      * @param path A string version of the path within the state that you'd like to delete
      */
     deletePath(path: string) {
@@ -193,12 +196,12 @@ class GlobalStore {
         objectPath.del(store, path);
 
         this.log.debug(`Updating class state to exclude ${path}...`);
-        this.classState = { store, data: getStoreData(store) };
+        this.classState = { store, data: getStoreData(store, this.isCloud) };
     }
 
     /**
      * Automatically push the value of a path to the dataset, then delete it from the store.
-     * 
+     *
      * @param path A string version of the path within the state that you'd like to push to the dataset
      * @param dataset Optional, provide a dataset to push to. If not provided, the default dataset will be used.
      */
@@ -224,7 +227,7 @@ class GlobalStore {
         objectPath.del(store, path);
 
         this.log.debug(`Updating class state to exclude ${path}...`);
-        this.classState = { store, data: getStoreData(store) };
+        this.classState = { store, data: getStoreData(store, this.isCloud) };
     }
 
     /**
@@ -232,7 +235,7 @@ class GlobalStore {
      */
     dump() {
         this.log.general(`Dumping entire store: ${this.storeName}`);
-        this.classState = { store: {}, data: getStoreData({}) };
+        this.classState = { store: {}, data: getStoreData({}, this.isCloud) };
     }
 
     /**

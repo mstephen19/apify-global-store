@@ -10,9 +10,10 @@ export interface InitializeOptions {
 }
 
 export interface StoreData {
-    sizeInBytes?: number;
-    lastModified?: string;
-    globalStoreVersion?: string;
+    sizeInBytes: number;
+    lastModified: string;
+    globalStoreVersion: string;
+    type: 'LOCAL' | 'CLOUD';
 }
 export interface State {
     store: StoreState;

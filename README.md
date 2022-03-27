@@ -145,7 +145,8 @@ An object containing information about the contents of the store. Example:
 {
     sizeInBytes: 17,
     lastModified: '2022-03-18T15:39:45.041Z',
-    globalStoreVersion: '1.0.9'
+    globalStoreVersion: '1.0.9',
+    type: 'LOCAL'
 }
 ```
 
@@ -426,6 +427,19 @@ If `cloud` was set to `true`, the global store will be stored in the cloud on yo
 
 The GlobalStore class.
 
+-   **_InitializeOptions_**
+
+The options to initialize an instance of GlobalStore.
+
+```TypeScript
+interface InitializeOptions {
+    name?: string;
+    initialState?: Record<string, unknown>;
+    cloud?: boolean;
+    debug?: boolean;
+}
+```
+
 -   **_StoreState_**
 
 An object representing the state returned from `store.state`.
@@ -446,6 +460,14 @@ export type SetStateFunctionCallBack = (previous: StoreState) => StoreState;
 
 The `action` object of your reducer function. Must include a `type` key.
 
+```TypeScript
+interface ReducerType {
+    type: string;
+}
+
+export type ReducerParam<T> = ReducerType & Record<string, T>;
+```
+
 -   **_ReducerFunction_**
 
 A function which should be passed into `store.addReducer()`
@@ -460,9 +482,10 @@ An object representing the data which is returned from `store.info`
 
 ```TypeScript
 export interface StoreData {
-    sizeInBytes?: number;
-    lastModified?: string;
-    globalStoreVersion?: string;
+    sizeInBytes: number;
+    lastModified: string;
+    globalStoreVersion: string;
+    type: 'CLOUD' | 'LOCAL';
 }
 ```
 

@@ -7,6 +7,7 @@ declare class GlobalStore {
     private keyValueStore;
     readonly debug: boolean;
     private log;
+    readonly isCloud: boolean;
     private constructor();
     static init({ name, initialState, cloud, debug }?: InitializeOptions): Promise<GlobalStore>;
     static summon(storeName?: string): GlobalStore;

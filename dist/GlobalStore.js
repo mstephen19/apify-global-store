@@ -44,12 +44,19 @@ class GlobalStore {
             writable: true,
             value: void 0
         });
+        Object.defineProperty(this, "isCloud", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: void 0
+        });
         this.classState = initialState;
         this.storeName = storeName || constants_1.GLOBAL_STORE;
         this.keyValueStore = kvStore;
         this.reducer = null;
         this.debug = debug !== null && debug !== void 0 ? debug : false;
         this.log = new utils_1.Logger(debug, this.storeName);
+        this.isCloud = this.keyValueStore !== apify_1.default;
         apify_1.default.events.on('persistState', () => {
             this.log.general(`Persisting store ${this.storeName}...`);
             return this.keyValueStore.setValue(this.storeName, this.classState);
@@ -64,7 +71,7 @@ class GlobalStore {
         const storeName = (name === null || name === void 0 ? void 0 : name.toUpperCase()) || constants_1.GLOBAL_STORE;
         if (storeInstances[storeName.toUpperCase()])
             throw new Error((0, utils_1.errorString)(`Can only use the name "${storeName}" for one global store!`));
-        let state = { store: { ...initialState }, data: (0, utils_1.getStoreData)(initialState || {}) };
+        let state = { store: { ...initialState }, data: (0, utils_1.getStoreData)(initialState || {}, cloud) };
         const kvStore = cloud ? await apify_1.default.openKeyValueStore(constants_1.CLOUD_GLOBAL_STORES, { forceCloud: true }) : apify_1.default;
         const data = await kvStore.getValue(storeName);
         if (!!data)
@@ -92,7 +99,7 @@ class GlobalStore {
     set(setStateParam) {
         this.log.debug('Updating state...');
         const newStoreStateValue = { ...setStateParam(this.classState.store) };
-        const newState = { store: newStoreStateValue, data: (0, utils_1.getStoreData)(newStoreStateValue) };
+        const newState = { store: newStoreStateValue, data: (0, utils_1.getStoreData)(newStoreStateValue, this.isCloud) };
         this.log.debug('Setting new class state...');
         this.classState = newState;
     }
@@ -109,14 +116,14 @@ class GlobalStore {
         console.table(action);
         const newState = this.reducer(this.classState.store, action);
         this.log.debug('Replacing class state with new state...');
-        this.classState = { store: { ...newState }, data: (0, utils_1.getStoreData)(newState) };
+        this.classState = { store: { ...newState }, data: (0, utils_1.getStoreData)(newState, this.isCloud) };
     }
     setPath(path, value) {
         const store = { ...this.classState.store };
         this.log.debug('Setting new path...');
         object_path_1.default.set(store, path, value);
         this.log.debug('Replacing class state with new state...');
-        this.classState = { store, data: (0, utils_1.getStoreData)(store) };
+        this.classState = { store, data: (0, utils_1.getStoreData)(store, this.isCloud) };
     }
     deletePath(path) {
         this.log.debug(`Grabbing value for path ${path}...`);
@@ -127,7 +134,7 @@ class GlobalStore {
         this.log.debug(`Deleting value for path ${path} in state copy...`);
         object_path_1.default.del(store, path);
         this.log.debug(`Updating class state to exclude ${path}...`);
-        this.classState = { store, data: (0, utils_1.getStoreData)(store) };
+        this.classState = { store, data: (0, utils_1.getStoreData)(store, this.isCloud) };
     }
     async pushPathToDataset(path, dataset) {
         this.log.debug(`Grabbing value for path ${path}...`);
@@ -150,11 +157,11 @@ class GlobalStore {
         this.log.debug(`Deleting value for path ${path} in state copy...`);
         object_path_1.default.del(store, path);
         this.log.debug(`Updating class state to exclude ${path}...`);
-        this.classState = { store, data: (0, utils_1.getStoreData)(store) };
+        this.classState = { store, data: (0, utils_1.getStoreData)(store, this.isCloud) };
     }
     dump() {
         this.log.general(`Dumping entire store: ${this.storeName}`);
-        this.classState = { store: {}, data: (0, utils_1.getStoreData)({}) };
+        this.classState = { store: {}, data: (0, utils_1.getStoreData)({}, this.isCloud) };
     }
     async forceSave() {
         this.log.debug('Force-saving...');
