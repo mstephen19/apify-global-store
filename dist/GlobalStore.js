@@ -163,9 +163,18 @@ class GlobalStore {
         this.log.general(`Dumping entire store: ${this.storeName}`);
         this.classState = { store: {}, data: (0, utils_1.getStoreData)({}, this.isCloud) };
     }
+    static dumpAll() {
+        for (const store of Object.values(storeInstances)) {
+            store.dump();
+        }
+    }
     async forceSave() {
         this.log.debug('Force-saving...');
         return this.keyValueStore.setValue(this.storeName, this.classState);
+    }
+    async backup() {
+        const cloudStore = await apify_1.default.openKeyValueStore(constants_1.CLOUD_GLOBAL_STORES);
+        await cloudStore.setValue(this.storeName, this.classState);
     }
 }
 exports.default = GlobalStore;

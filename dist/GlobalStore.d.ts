@@ -21,6 +21,8 @@ declare class GlobalStore {
     deletePath(path: string): void;
     pushPathToDataset(path: string, dataset?: Dataset): Promise<void>;
     dump(): void;
+    static dumpAll(): void;
     forceSave(): Promise<void>;
+    backup(): Promise<void>;
 }
 export default GlobalStore;

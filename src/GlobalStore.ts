@@ -33,17 +33,11 @@ class GlobalStore {
 
     private constructor(storeName: string, initialState: State, kvStore: KeyValueStore | typeof Apify, debug: boolean) {
         this.classState = initialState;
-
         this.storeName = storeName || GLOBAL_STORE;
-
         this.keyValueStore = kvStore;
-
         this.reducer = null;
-
         this.debug = debug ?? false;
-
         this.log = new Logger(debug, this.storeName);
-
         this.isCloud = this.keyValueStore !== Apify;
 
         Apify.events.on('persistState', () => {
@@ -239,11 +233,28 @@ class GlobalStore {
     }
 
     /**
+     * Completely clear out all instances of GlobalStore.
+     */
+    static dumpAll() {
+        for (const store of Object.values(storeInstances)) {
+            store.dump();
+        }
+    }
+
+    /**
      * If saving on every "persistState" event is not enough, use "forceSave" to instantly save the GlobalStore to the Key-Value Store.
      */
     async forceSave() {
         this.log.debug('Force-saving...');
         return this.keyValueStore.setValue(this.storeName, this.classState);
+    }
+
+    /**
+     * Back the store up to the cloud. If you want your store to automatically back up to the cloud on an interval, use the `cloud` option in `InitializeOptions` instead.
+     */
+    async backup() {
+        const cloudStore = await Apify.openKeyValueStore(CLOUD_GLOBAL_STORES);
+        await cloudStore.setValue(this.storeName, this.classState);
     }
 }
 

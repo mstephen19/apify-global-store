@@ -12,22 +12,27 @@
 -   [About](#about)
 -   [Importing](#importing)
 -   [Example](#example)
--   [Usage](#usage)
+-   [General Usage](#general-usage)
     -   [`await GlobalStore.init()`](#await-globalstoreinit)
     -   [`store.state`](#storestate)
     -   [`store.info`](#storeinfo)
+-   [Mutating State](#mutating-state)
     -   [`store.set()`](#storeset)
-    -   [`await store.pushPathToDataset()`](#await-storepushpathtodataset)
-    -   [`store.dump()`](#storedump)
-    -   [`GlobalStore.summon()`](#globalstoresummon)
-    -   [`GlobalStore.summonAll()`](#globalstoresummonall)
-    -   [`await store.forceSave()`](#await-storeforcesave)
     -   [`store.setPath()`](#storesetpath)
     -   [`store.deletePath()`](#storedeletepath)
-    -   [Best practices with store management](#best-practices-with-store-management)
--   [Advanced Usage](#advanced-usage)
     -   [`store.addReducer()`](#storeaddreducer)
     -   [`store.setWithReducer()`](#storesetwithreducer)
+-   [Data Management](#data-management)
+    -   [`await store.pushPathToDataset()`](#await-storepushpathtodataset)
+    -   [`store.dump()`](#storedump)
+    -   [`await store.backup()`](#await-storebackup)
+    -   [`await store.forceSave()`](#await-storeforcesave)
+-   [Static Methods](#static-methods)
+    -   [`GlobalStore.summon()`](#globalstoresummon)
+    -   [`GlobalStore.summonAll()`](#globalstoresummonall)
+    -   [`GlobalStore.dumpAll()`](#globalstoredumpall)
+-   [Best Practices](#best-practices)
+    -   [Best practices with store management](#best-practices-with-store-management)
     -   [Best practices when using a reducer](#best-practices-when-using-a-reducer)
 -   [Storage](#storage)
 -   [Available Types](#available-types)
@@ -90,7 +95,7 @@ Apify.main(async () => {
 });
 ```
 
-## Usage
+## General Usage
 
 ### `await GlobalStore.init()`
 
@@ -150,6 +155,8 @@ An object containing information about the contents of the store. Example:
 }
 ```
 
+## Mutating State
+
 ### `store.set()`
 
 (**setStateParam**: _SetStateFunctionCallBack_) => `void`
@@ -173,67 +180,6 @@ store.set((prev) => {
 
 > **Note:** It is always best practice to spread out the previous state at the top level of the returned object, then to add/override any values below.
 
-### `await store.pushPathToDataset()`
-
-(**path**: _string_, **dataset**: _Dataset_) => `Promise<void>`
-
-| Argument | Type    | Required  | Description                                                                      |
-| -------- | ------- | --------- | -------------------------------------------------------------------------------- |
-| path     | string  | **true**  | A string version of the path within the state you'd like to push to the dataset. |
-| dataset  | Dataset | **false** | The dataset to push to. If not provided a dataset, the default one will be used. |
-
-Push some data from the store into the specified dataset (or into the default one), then automatically delete it from the store after it's been pushed.
-
-**Usage:**
-
-```JavaScript
-await store.pushPathToDataset(`products.${productId}.reviews.${reviewId}`)
-```
-
-> **Note:** When using this method to push to a dataset, the path is deleted within the state. If you don't want the data to be deleted from the global store after being pushed to the dataset, use regular `Apify.pushData()` instead.
-
-### `store.dump()`
-
-() => `void`
-
-Completely empty the entire contents of the store.
-
-### `GlobalStore.summon()`
-
-(**storeName**: _string_) => `GlobalStore`
-
-| Argument  | Type   | Required  | Description                      |
-| --------- | ------ | --------- | -------------------------------- |
-| storeName | string | **false** | The name of the store to summon. |
-
-A static method which returns the instance of the store attached to the name provided. A useful and simple aternative to passing a store instance around a parameter.
-
-You are **_not_** required to provide the uppercase version of the store name in the `storeName` parameter. It is automatically done for you.
-
-If you do not provide a store name, then the default store `GLOBAL-STORE` will be summoned.
-
-**Usage:**
-
-```JavaScript
-const store = await GlobalStore.init()
-
-const summoned = GlobalStore.summon('GLOBAL-STORE')
-
-console.log(summoned.state) // => {}
-```
-
-### `GlobalStore.summonAll()`
-
-() => `Record<string, GlobalStore>`
-
-Similar to `summon`, but returns the entire `storeInstances` object, which is a map of all instances of GlobalStore.
-
-### `await store.forceSave()`
-
-() => `Promise<void>`
-
-The store's data is saved to the Key-Value Store every single time the "persistState" event is fired. It can also be forced to be saved instantly with this method.
-
 ### `store.setPath()`
 
 (**path**: _string_, **value**: _unknown_) => `void`
@@ -247,6 +193,18 @@ The store's data is saved to the Key-Value Store every single time the "persistS
 
 ```JavaScript
 store.setPath(`products.${productId}.reviews`, reviewsObject)
+```
+
+If the key you are using has dots in it (eg. "https://google.com"), you should use bracket notation instead of dot notation.
+
+```JavaScript
+const link = 'https://google.com'
+
+// This will throw an error saying the path "websites -> https://google -> com" doesn't exist, which is true.
+store.setPath(`websites.${link}`)
+
+// This will work, because it is using bracket notation instead, therefore the ".com" is not evaluated as dot notation.
+store.setPath(`websites[https://google.com]`)
 ```
 
 ### `store.deletePath()`
@@ -264,30 +222,6 @@ store.setPath(`products.${productId}.reviews`)
 ```
 
 > **Note:** This method works similar to `store.pushPathToDataset()`, except it does not push the data to the dataset prior to deleting it from the state.
-
-### Best practices with store management
-
-When using more than one instance of GlobalStore, it is best to use custom store names, and to put them into a constant:
-
-`consts.ts`:
-
-```TypeScript
-export enum storeNames { PRODUCTS = 'PRODUCTS', HOTELS = 'HOTELS' };
-```
-
-`main.ts`:
-
-```TypeScript
-import { storeNames } from './consts';
-
-const productStore = await GlobalStore.init({ name: storeNames.PRODUCTS });
-
-const hotelStore = await GlobalStore.init({name: storeNames.HOTELS});
-
-const summoned = GlobalStore.summon(storeNames.HOTELS);
-```
-
-## Advanced usage
 
 ### `store.addReducer()`
 
@@ -340,7 +274,108 @@ const action = { type: 'ADD-PRODUCT-REVIEW', productId: 1234, payload: { title: 
 store.setWithReducer(action);
 ```
 
-### Best practices when using a reducer
+## Data Management
+
+### `await store.pushPathToDataset()`
+
+(**path**: _string_, **dataset**: _Dataset_) => `Promise<void>`
+
+| Argument | Type    | Required  | Description                                                                      |
+| -------- | ------- | --------- | -------------------------------------------------------------------------------- |
+| path     | string  | **true**  | A string version of the path within the state you'd like to push to the dataset. |
+| dataset  | Dataset | **false** | The dataset to push to. If not provided a dataset, the default one will be used. |
+
+Push some data from the store into the specified dataset (or into the default one), then automatically delete it from the store after it's been pushed.
+
+**Usage:**
+
+```JavaScript
+await store.pushPathToDataset(`products.${productId}.reviews.${reviewId}`)
+```
+
+> **Note:** When using this method to push to a dataset, the path is deleted within the state. If you don't want the data to be deleted from the global store after being pushed to the dataset, use regular `Apify.pushData()` instead.
+
+### `store.dump()`
+
+() => `void`
+
+Completely empty the entire contents of the store.
+
+### `await store.backup()`
+
+() => `Promise<void>`
+
+Back the store up to the cloud. The backup will be stored in the "Storages" section of your Apify account under a Key-Value store named `CLOUD-GLOBAL-STORES`
+
+### `await store.forceSave()`
+
+() => `Promise<void>`
+
+The store's data is saved to the Key-Value Store every single time the "persistState" event is fired. It can also be forced to be saved instantly with this method.
+
+## Static Methods
+
+### `GlobalStore.summon()`
+
+(**storeName**: _string_) => `GlobalStore`
+
+| Argument  | Type   | Required  | Description                      |
+| --------- | ------ | --------- | -------------------------------- |
+| storeName | string | **false** | The name of the store to summon. |
+
+A static method which returns the instance of the store attached to the name provided. A useful and simple aternative to passing a store instance around a parameter.
+
+You are **_not_** required to provide the uppercase version of the store name in the `storeName` parameter. It is automatically done for you.
+
+If you do not provide a store name, then the default store `GLOBAL-STORE` will be summoned.
+
+**Usage:**
+
+```JavaScript
+const store = await GlobalStore.init()
+
+const summoned = GlobalStore.summon('GLOBAL-STORE')
+
+console.log(summoned.state) // => {}
+```
+
+### `GlobalStore.summonAll()`
+
+() => `StoreInstances`
+
+Similar to `summon`, but returns the entire `storeInstances` object, which is a map of all instances of GlobalStore.
+
+### `GlobalStore.dumpAll()`
+
+() => `void`
+
+Dump all instances of GlobalStore at once.
+
+## Best Practices
+
+### Store Management
+
+When using more than one instance of GlobalStore, it is best to use custom store names, and to put them into a constant:
+
+`consts.ts`:
+
+```TypeScript
+export enum storeNames { PRODUCTS = 'PRODUCTS', HOTELS = 'HOTELS' };
+```
+
+`main.ts`:
+
+```TypeScript
+import { storeNames } from './consts';
+
+const productStore = await GlobalStore.init({ name: storeNames.PRODUCTS });
+
+const hotelStore = await GlobalStore.init({name: storeNames.HOTELS});
+
+const summoned = GlobalStore.summon(storeNames.HOTELS);
+```
+
+### Using a reducer
 
 1. It is always best practice to define your action types as constants, then to import them when defining your reducer.
 2. Always define your reducer outside of the `store.addReducer()` method. Ideally, this should be done in a separate file.
