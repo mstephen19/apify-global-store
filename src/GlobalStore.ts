@@ -233,7 +233,7 @@ class GlobalStore {
     }
 
     /**
-     * Completely clear out all instances of GlobalStore.
+     * Completely dump all instances of GlobalStore.
      */
     static dumpAll() {
         for (const store of Object.values(storeInstances)) {

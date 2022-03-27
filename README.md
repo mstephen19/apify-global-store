@@ -73,7 +73,7 @@ const { GlobalStore } = require('apify-global-store');
 Apify.main(async () => {
     const store = await GlobalStore.init();
 
-    console.log(store.state) // -> {}
+    console.log(store.state); // -> {}
 
     store.set((prev) => {
         return {
@@ -82,7 +82,7 @@ Apify.main(async () => {
         }
     })
 
-    console.log(store.state) // -> { message: 'hello' }
+    console.log(store.state); // -> { message: 'hello' }
 
     store.set((prev) => {
         return {
@@ -91,7 +91,7 @@ Apify.main(async () => {
         }
     })
 
-    console.log(store.state) // -> { message: 'hello', message2: 'world' }
+    console.log(store.state); // -> { message: 'hello', message2: 'world' }
 });
 ```
 
@@ -115,6 +115,20 @@ interface InitializeOptions {
 ```
 
 `GlobalStore` doesn't have a public constructor. Its `init()` method runs necessary asynchronous tasks prior to calling on its private constructor.
+
+**Usage:**
+
+```JavaScript
+const store = await GlobalStore.init({
+    name: 'clothing-store',
+    initialState: {
+        websites: [],
+        errors: [],
+    },
+    cloud: true,
+    debug: true
+});
+```
 
 **Usage:**
 
@@ -192,7 +206,7 @@ store.set((prev) => {
 **Usage:**
 
 ```JavaScript
-store.setPath(`products.${productId}.reviews`, reviewsObject)
+store.setPath(`products.${productId}.reviews`, reviewsObject);
 ```
 
 If the key you are using has dots in it (eg. "https://google.com"), you should use bracket notation instead of dot notation.
@@ -218,7 +232,7 @@ store.setPath(`websites[https://google.com]`)
 **Usage:**
 
 ```JavaScript
-store.setPath(`products.${productId}.reviews`)
+store.setPath(`products.${productId}.reviews`);
 ```
 
 > **Note:** This method works similar to `store.pushPathToDataset()`, except it does not push the data to the dataset prior to deleting it from the state.
@@ -290,7 +304,7 @@ Push some data from the store into the specified dataset (or into the default on
 **Usage:**
 
 ```JavaScript
-await store.pushPathToDataset(`products.${productId}.reviews.${reviewId}`)
+await store.pushPathToDataset(`products.${productId}.reviews.${reviewId}`);
 ```
 
 > **Note:** When using this method to push to a dataset, the path is deleted within the state. If you don't want the data to be deleted from the global store after being pushed to the dataset, use regular `Apify.pushData()` instead.
@@ -332,11 +346,11 @@ If you do not provide a store name, then the default store `GLOBAL-STORE` will b
 **Usage:**
 
 ```JavaScript
-const store = await GlobalStore.init()
+const store = await GlobalStore.init();
 
-const summoned = GlobalStore.summon('GLOBAL-STORE')
+const summoned = GlobalStore.summon('GLOBAL-STORE');
 
-console.log(summoned.state) // => {}
+console.log(summoned.state); // => {}
 ```
 
 ### `GlobalStore.summonAll()`
@@ -520,9 +534,20 @@ export interface StoreData {
     sizeInBytes: number;
     lastModified: string;
     globalStoreVersion: string;
-    type: 'CLOUD' | 'LOCAL';
+    type: 'LOCAL' | 'CLOUD';
 }
 ```
+
+## Credits
+
+### Matt Stephens
+
+-   [LinkedIn](https://www.linkedin.com/in/mstephen19/)
+-   [Github](https://github.com/mstephen19)
+
+### Kristýna Lhoťanová
+
+-   [Github](https://github.com/lhotanok)
 
 ## License
 
