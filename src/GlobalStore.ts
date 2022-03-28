@@ -222,7 +222,6 @@ class GlobalStore {
         const value: Record<string, unknown> | Record<string, unknown>[] = objectPath.get(this.classState.store, path);
 
         if (!value) throw new Error(errorString(`Path ${path} not found within store!`));
-
         if (typeof value !== 'object') throw new Error(errorString(`Can only push objects or arrays! Trying to push ${typeof value}.`));
 
         this.log.debug('Pushing data to the dataset...');
@@ -296,12 +295,12 @@ class GlobalStore {
      *
      * @param name The name of the method used when adding it to GlobalStore.
      */
-    static async useMethod(name: string) {
+    static async useMethod(name: string, ...rest: unknown[]) {
         if (!name || typeof name !== 'string' || !this.#methods?.[name]) throw new Error(errorString('Method not found!'));
 
         const method = this.#methods[name];
 
-        return method(this.#storeInstances);
+        return method(this.#storeInstances, ...rest);
     }
 }
 

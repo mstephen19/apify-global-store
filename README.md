@@ -8,10 +8,10 @@
 
 ## What's new in `1.1.3`?
 
+-   Addition of `addMethod` and `useMethod` (experimental)
 -   `pushPathToDataset` method name shortened to `pushPath`
 -   Support for array formatted paths in `setPath`, `deletePath`, and `pushPath`
 -   Bug fixes for `pushPath`, `summon`, and `summonAll`
--   Addition of static methods `addMethod` and `useMethod` (experimental)
 -   Improve debug logs
 -   Improve JSDoc
 
@@ -50,6 +50,9 @@ State persistence, actor migrations, and race conditions are automatically handl
     -   [`GlobalStore.summon()`](#globalstoresummon)
     -   [`GlobalStore.summonAll()`](#globalstoresummonall)
     -   [`GlobalStore.dumpAll()`](#globalstoredumpall)
+-   [Experimental Methods](#experimental-methods)
+    -   [`GlobalStore.addMethod()`](#globalstoreaddmethod)
+    -   [`GlobalStore.useMethod()`](#globalstoreusemethod)
 -   [Best Practices](#best-practices)
     -   [Best practices with store management](#best-practices-with-store-management)
     -   [Best practices when using a reducer](#best-practices-when-using-a-reducer)
@@ -374,6 +377,108 @@ Similar to `summon`, but returns the entire `storeInstances` object, which is a 
 
 Dump all instances of GlobalStore at once.
 
+## Experimental Methods
+
+### `GlobalStore.addMethod()`
+
+(**addMethodOptions**: _[AddMethodOptions](#available-types)_) => `void`
+
+| Argument         | Type             | Required | Description                                                                                                                                                     |
+| ---------------- | ---------------- | -------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| addMethodOptions | AddMethodOptions | **true** | An object containing the name and method to add. Within this method, the return value of `GlobalStore.summonAll()` is already passed in as the first parameter. |
+
+Add a custom method to the entire GlobalStore class, which is accessible through `GlobalStore.useMethod()`. This method can be used to modify any store instance.
+
+This is valuable for convenience sake, or when you are making complex modifications to multiple stores.
+
+**Usage:**
+
+Here is an example of using addMethod to add a complex method to GlobalStore, which modifies the state of three different instances.
+
+```TypeScript
+// Import GlobalStore and the CustomMethod type
+import { GlobalStore, CustomMethod } from 'apify-global-store';
+
+import { methodNames, storeNames } from './consts';
+
+// Destructure our constants
+const { ADD_PRODUCT_AND_REVIEWS } = methodNames;
+const { PRODUCTS, REVIEWS, RUN_DATA } = storeNames;
+
+// Create a function which ALWAYS takes StoreInstances as the first argument
+// Our custom arguments come after the first one
+const method: CustomMethod = async (instances, product, website) => {
+    // Grab the instances of each store we need
+    const productStore = instances[PRODUCTS];
+    const reviewsStore = instances[REVIEWS];
+    const runDataStore = instances[RUN_DATA]
+
+    // First, add our product to the PRODUCTS GlobalStore instance
+    productStore.set((prev) => {
+        // Grab the product's data without its reviews
+        const { reviews, ...productData } = product;
+
+        return {
+            // Spread the previous state
+            ...prev,
+            [website]: {
+                products: {
+                    // Spread the previous data for [website].products
+                    ...prev[website].products,
+                    // Add our new product
+                    [productData.id]: productData
+                }
+            }
+        }
+    })
+
+    // Add our product's reviews to the REVIEWS GlobalStore instance
+    reviewsStore.setPath([website, product.id, 'latestReviews'], product.reviews)
+
+    // If the products for this specific website has reached our threshold,
+    // push the data to the dataset and delete it from the REVIEWS store
+    if (reviewsStore.state[website].length >= 100) {
+        await reviewsStore.pushPath(website);
+    };
+
+    // Update our RUN-DATA store
+    runDataStore.set((prev) => {
+        return {
+            ...prev,
+            [website]: {
+                ...prev[website],
+                runs: prev[website].runs + 1
+            }
+        }
+    })
+};
+
+GlobalStore.addMethod({ name: ADD_PRODUCT_AND_REVIEWS, method });
+```
+
+> **Note:** It's not recommended to use reducers inside of these custom methods. That can make things complicated very quickly. `addMethod` can serve as an alternative to `addReducer`.
+
+### `GlobalStore.useMethod()`
+
+(**name**: _string_, **...rest**) => `void` | `Promise<void>`
+
+| Argument | Type      | Required  | Description                                                |
+| -------- | --------- | --------- | ---------------------------------------------------------- |
+| name     | string    | **true**  | The name of the method used when adding it to GlobalStore. |
+| ...rest  | unknown[] | **false** | Any custom parameters the method needs to run properly     |
+
+**Usage:**
+
+```TypeScript
+import { methodNames } from './consts';
+
+const { ADD_PRODUCT_AND_REVIEWS } = methodNames;
+
+const product = parseProduct($);
+
+await GlobalStore.useMethod(ADD_PRODUCT_AND_REVIEWS, product, new URL(request.url).hostname);
+```
+
 ## Best Practices
 
 These are not necessarily gospel, but they can help you modularize and scale your project while also making it more readable.
@@ -556,6 +661,17 @@ An object which hold all instances of GlobalStore, accessible through `GlobalSto
 
 ```TypeScript
 type StoreInstances = Record<DefaultStoreName | string, GlobalStore>;
+```
+
+-   **_AddMethodOptions_**
+
+```TypeScript
+export type CustomMethod = (storeInstances: StoreInstances, ...rest: unknown[]) => unknown | Promise<unknown>;
+
+interface AddMethodOptions {
+    name: string;
+    method: CustomMethod;
+}
 ```
 
 ## Credits

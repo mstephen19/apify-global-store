@@ -36,7 +36,7 @@ export type ReducerFunction = <T>(state: StoreState, action: ReducerParam<T>) =>
 
 export type StoreInstances = Record<DefaultStoreName | string, GlobalStore>;
 
-export type CustomMethod = (storeInstances: StoreInstances) => unknown | Promise<unknown>;
+export type CustomMethod = (storeInstances: StoreInstances, ...rest: unknown[]) => unknown | Promise<unknown>;
 
 export interface AddMethodOptions {
     name: string;
