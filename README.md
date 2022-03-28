@@ -6,11 +6,12 @@
 
 ![npm](https://img.shields.io/npm/dw/apify-global-store)
 
-## What's new in `1.1.2`?
+## What's new in `1.1.3`?
 
 -   `pushPathToDataset` method name shortened to `pushPath`
 -   Support for array formatted paths in `setPath`, `deletePath`, and `pushPath`
--   Bug fixes
+-   Bug fixes for `pushPath`, `summon`, and `summonAll`
+-   Addition of static methods `addMethod` and `useMethod` (experimental)
 -   Improve debug logs
 -   Improve JSDoc
 
@@ -513,7 +514,7 @@ type StoreState = Record<string, unknown>;
 The callback function to be passed into `store.set()`
 
 ```TypeScript
-export type SetStateFunctionCallBack = (previous: StoreState) => StoreState;
+type SetStateFunctionCallBack = (previous: StoreState) => StoreState;
 ```
 
 -   **_ReducerParam_**
@@ -525,7 +526,7 @@ interface ReducerType {
     type: string;
 }
 
-export type ReducerParam<T> = ReducerType & Record<string, T>;
+type ReducerParam<T> = ReducerType & Record<string, T>;
 ```
 
 -   **_ReducerFunction_**
@@ -541,12 +542,20 @@ type ReducerFunction = <T>(state: StoreState, action: ReducerParam<T>) => StoreS
 An object representing the data which is returned from `store.info`
 
 ```TypeScript
-export interface StoreData {
+interface StoreData {
     sizeInBytes: number;
     lastModified: string;
     globalStoreVersion: string;
     type: 'LOCAL' | 'CLOUD';
 }
+```
+
+-   **_StoreInstances_**
+
+An object which hold all instances of GlobalStore, accessible through `GlobalStore.summonAll()`
+
+```TypeScript
+type StoreInstances = Record<DefaultStoreName | string, GlobalStore>;
 ```
 
 ## Credits

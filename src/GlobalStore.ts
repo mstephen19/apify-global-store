@@ -15,9 +15,9 @@ import {
     InitializeOptions,
     StoreInstances,
     StoreData,
+    CustomMethod,
+    AddMethodOptions,
 } from './types';
-
-const storeInstances: StoreInstances = {};
 
 /**
  * Use `await GlobalStore.init(InitializeOptions)` to get started using GlobalStore!
@@ -30,6 +30,9 @@ class GlobalStore {
     readonly debug: boolean;
     private log: Logger;
     readonly isCloud: boolean;
+
+    static #methods: Record<string, CustomMethod> = {};
+    static #storeInstances: StoreInstances = {};
 
     private constructor(storeName: string, initialState: State, kvStore: KeyValueStore | typeof Apify, debug: boolean) {
         this.classState = initialState;
@@ -45,7 +48,7 @@ class GlobalStore {
             return this.keyValueStore.setValue(this.storeName, this.classState);
         });
 
-        storeInstances[storeName] = this;
+        GlobalStore.#storeInstances[storeName] = this;
 
         this.log.general(`Store initialized.`);
 
@@ -72,7 +75,7 @@ class GlobalStore {
         const storeName = name?.toUpperCase() || GLOBAL_STORE;
 
         // Name can only be used once
-        if (storeInstances[storeName.toUpperCase()]) throw new Error(errorString(`Can only use the name "${storeName}" for one global store!`));
+        if (this.#storeInstances[storeName.toUpperCase()]) throw new Error(errorString(`Can only use the name "${storeName}" for one global store!`));
 
         // Initialize our state
         let state: State = { store: { ...initialState }, data: getStoreData(initialState || {}, cloud) };
@@ -92,18 +95,24 @@ class GlobalStore {
      * @param storeName The name of the store you'd like to have returned.
      */
     static summon(storeName?: string) {
-        if (!storeName) return storeInstances[GLOBAL_STORE];
+        const formatted = storeName?.toUpperCase();
 
-        if (!storeInstances[storeName.toUpperCase()]) throw new Error(errorString(`Store with name ${storeName.toUpperCase()} doesn't exist!`));
+        if (formatted && !this.#storeInstances[formatted]) throw new Error(errorString(`Store with name ${formatted} doesn't exist!`));
 
-        return storeInstances[storeName.toUpperCase()];
+        if (formatted) return this.#storeInstances[formatted];
+
+        if (!formatted && this.#storeInstances[GLOBAL_STORE]) return this.#storeInstances[GLOBAL_STORE];
+
+        throw new Error(errorString('Failed to locate GlobalStore instance.'));
     }
 
     /**
      * Return an object containing **all instances** of GlobalStore. Each key pertains to the each store's name.
      */
     static summonAll(): StoreInstances {
-        return storeInstances;
+        if (!Object.values(this.#storeInstances).length) throw new Error('No store instances found!');
+
+        return this.#storeInstances;
     }
 
     /**
@@ -245,7 +254,7 @@ class GlobalStore {
      * Completely dump all instances of GlobalStore.
      */
     static dumpAll() {
-        for (const store of Object.values(storeInstances)) {
+        for (const store of Object.values(this.#storeInstances)) {
             store.dump();
         }
     }
@@ -266,7 +275,33 @@ class GlobalStore {
         this.log.debug('Backing up the store to the cloud...');
 
         const cloudStore = await Apify.openKeyValueStore(CLOUD_GLOBAL_STORES);
-        await cloudStore.setValue(this.storeName, this.classState);
+        return cloudStore.setValue(this.storeName, this.classState);
+    }
+
+    /**
+     * Add a custom method to GlobalStore. The return value of `GlobalStore.summonAll()` is automatically passed into this function as the first parameter.
+     *
+     * @param addMethodOptions A name for the method, as well as the custom method.
+     */
+    static addMethod({ name, method }: AddMethodOptions) {
+        if (!name || !method) throw new Error(errorString('Must provide a name and a method!'));
+
+        if (typeof method !== 'function') throw new Error(errorString('Custom method must be a function!'));
+
+        this.#methods[name] = method;
+    }
+
+    /**
+     * Retrieve an added method, then run it.
+     *
+     * @param name The name of the method used when adding it to GlobalStore.
+     */
+    static async useMethod(name: string) {
+        if (!name || typeof name !== 'string' || !this.#methods?.[name]) throw new Error(errorString('Method not found!'));
+
+        const method = this.#methods[name];
+
+        return method(this.#storeInstances);
     }
 }
 
