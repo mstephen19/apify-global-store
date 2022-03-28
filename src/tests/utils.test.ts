@@ -21,12 +21,12 @@ describe('errorString', () => {
 
 describe('getStoreData', () => {
     it('Should return the correct byte number value', () => {
-        const data = getStoreData({ hello: 'world' });
+        const data = getStoreData({ hello: 'world' }, true);
         expect(data).toHaveProperty('sizeInBytes', 17);
     });
 
     it('Should return a proper ISO string', () => {
-        const data = getStoreData({ hello: 'world' });
+        const data = getStoreData({ hello: 'world' }, true);
         expect(data).toHaveProperty('lastModified');
 
         //@ts-ignore
@@ -35,7 +35,7 @@ describe('getStoreData', () => {
     });
 
     it('Should return the proper current version', () => {
-        const data = getStoreData({ hello: 'world' });
+        const data = getStoreData({ hello: 'world' }, true);
         expect(data).toHaveProperty('globalStoreVersion', CURRENT_VERSION);
     });
 });

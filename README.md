@@ -6,10 +6,28 @@
 
 ![npm](https://img.shields.io/npm/dw/apify-global-store)
 
+## What's new in `1.1.2`?
+
+-   `pushPathToDataset` method name shortened to `pushPath`
+-   Support for array formatted paths in `setPath`, `deletePath`, and `pushPath`
+-   Bug fixes
+-   Improve debug logs
+-   Improve JSDoc
+
+## Installation
+
+```
+npm install apify-global-store
+```
+
+## About
+
+This is a simple and lightweight API which allows you to easily create and manage multiple global stores local to an actor's run. By using `apify-global-store`, you completely remove the need to pass large and complex data through requests. Simplify the process of storing incomplete data that isn't yet ready to be pushed to the dataset with `GlobalStore`!
+
+State persistence, actor migrations, and race conditions are automatically handled under the hood, so the global state will not be lost on migrations or graceful aborts.
+
 ## Table of Contents:
 
--   [Installation](#installation)
--   [About](#about)
 -   [Importing](#importing)
 -   [Example](#example)
 -   [General Usage](#general-usage)
@@ -23,7 +41,7 @@
     -   [`store.addReducer()`](#storeaddreducer)
     -   [`store.setWithReducer()`](#storesetwithreducer)
 -   [Data Management](#data-management)
-    -   [`await store.pushPathToDataset()`](#await-storepushpathtodataset)
+    -   [`await store.pushPath()`](#await-storepushpath)
     -   [`store.dump()`](#storedump)
     -   [`await store.backup()`](#await-storebackup)
     -   [`await store.forceSave()`](#await-storeforcesave)
@@ -37,18 +55,6 @@
 -   [Storage](#storage)
 -   [Available Types](#available-types)
 -   [License](#license)
-
-## Installation
-
-```
-npm install apify-global-store
-```
-
-## About
-
-This is an extremely simple API which allows you to easily create and manage multiple global stores local to an actor's run. Using `apify-global-store` removes the need to pass complex data through requests, and simplifies the process of storing incomplete data that isn't yet ready to be pushed to the dataset.
-
-State persistence, actor migrations, and race conditions are automatically handled under the hood, so the global state will not be lost on migrations or graceful aborts.
 
 ## Importing
 
@@ -92,6 +98,8 @@ Apify.main(async () => {
     })
 
     console.log(store.state); // -> { message: 'hello', message2: 'world' }
+
+    await store.pushPath('message')
 });
 ```
 
@@ -99,7 +107,7 @@ Apify.main(async () => {
 
 ### `await GlobalStore.init()`
 
-(**initializeOptions**: _InitializeOptions_) => `Promise<GlobalStore>`
+(**initializeOptions?**: _[InitializeOptions](#available-types)_ => `Promise<GlobalStore>`
 
 | Argument          | Type              | Required  | Description                                                             |
 | ----------------- | ----------------- | --------- | ----------------------------------------------------------------------- |
@@ -130,12 +138,6 @@ const store = await GlobalStore.init({
 });
 ```
 
-**Usage:**
-
-```JavaScript
-const store = await GlobalStore.init({ name: 'hello-world' });
-```
-
 If the store already has a previous state stored within the Key-Value store (in the situation that a migration/abort occurred), then the `initialState` option will have no effect.
 
 You can only pass letters and "-" within the string, otherwise an error will be thrown (to follow naming conventions). The provided store name will _always_ be forced into uppercase.
@@ -147,7 +149,7 @@ You can only pass letters and "-" within the string, otherwise an error will be 
 **Usage:**
 
 ```JavaScript
-const { myValue } = store.state
+const { myValue } = store.state;
 ```
 
 A getter method that returns the current state object of the store.
@@ -155,7 +157,7 @@ A getter method that returns the current state object of the store.
 ### `store.info`
 
 ```JavaScript
-const { sizeInBytes, lastModified } = store.info
+const { sizeInBytes, lastModified } = store.info;
 ```
 
 An object containing information about the contents of the store. Example:
@@ -173,7 +175,7 @@ An object containing information about the contents of the store. Example:
 
 ### `store.set()`
 
-(**setStateParam**: _SetStateFunctionCallBack_) => `void`
+(**setStateParam**: _[SetStateFunctionCallBack](#available-types)_) => `void`
 
 | Argument      | Type                     | Required | Description                                                                                                                                      |
 | ------------- | ------------------------ | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
@@ -196,34 +198,38 @@ store.set((prev) => {
 
 ### `store.setPath()`
 
-(**path**: _string_, **value**: _unknown_) => `void`
+(**path**: _string | string[]_, **value**: _unknown_) => `void`
 
 | Argument | Type    | Required | Description                                                              |
 | -------- | ------- | -------- | ------------------------------------------------------------------------ |
 | path     | string  | **true** | A string version of the path within the state you'd like to set/replace. |
-| value    | unknown | **true** | The value you'd like to set.                                             |
+| value    | unknown | **true** | The value you'd like to add for the specified path.                      |
 
 **Usage:**
 
 ```JavaScript
-store.setPath(`products.${productId}.reviews`, reviewsObject);
+store.setPath(`products.${productId}.reviews`, reviewsData);
 ```
 
 If the key you are using has dots in it (eg. "https://google.com"), you should use bracket notation instead of dot notation.
 
 ```JavaScript
-const link = 'https://google.com'
+const link = 'https://google.com';
+const data = { hello: 'world' }
 
-// This will throw an error saying the path "websites -> https://google -> com" doesn't exist, which is true.
-store.setPath(`websites.${link}`)
+// Will throw an error saying the path "websites -> https://google -> com" doesn't exist, which is true.
+store.setPath(`websites.${link}`, data);
 
-// This will work, because it is using bracket notation instead, therefore the ".com" is not evaluated as dot notation.
-store.setPath(`websites[https://google.com]`)
+// Using bracket notation instead; therefore, the ".com" is not evaluated as dot notation.
+store.setPath(`websites[${link}]`, data);
+
+// Array format can also be used
+store.setPath(['websites', link], data);
 ```
 
 ### `store.deletePath()`
 
-(**path**: _string_) => `void`
+(**path**: _string | string[]_) => `void`
 
 | Argument | Type   | Required | Description                                                         |
 | -------- | ------ | -------- | ------------------------------------------------------------------- |
@@ -235,11 +241,11 @@ store.setPath(`websites[https://google.com]`)
 store.setPath(`products.${productId}.reviews`);
 ```
 
-> **Note:** This method works similar to `store.pushPathToDataset()`, except it does not push the data to the dataset prior to deleting it from the state.
+> **Note:** This method works similar to `store.pushPath()`, except it does not push the data to the dataset prior to deleting it from the state.
 
 ### `store.addReducer()`
 
-(**reducerFn**: _ReducerFunction_) => `void`
+(**reducerFn**: _[ReducerFunction](#available-types)_) => `void`
 
 | Argument  | Type            | Required | Description                                                             |
 | --------- | --------------- | -------- | ----------------------------------------------------------------------- |
@@ -274,7 +280,7 @@ store.addReducer(reducer);
 
 ### `store.setWithReducer()`
 
-(**action**: _ReducerAction_) => `void`
+(**action**: _[ReducerAction](#available-types)_) => `void`
 
 | Argument | Type          | Required | Description                                    |
 | -------- | ------------- | -------- | ---------------------------------------------- |
@@ -290,9 +296,9 @@ store.setWithReducer(action);
 
 ## Data Management
 
-### `await store.pushPathToDataset()`
+### `await store.pushPath()`
 
-(**path**: _string_, **dataset**: _Dataset_) => `Promise<void>`
+(**path**: _string_, **dataset?**: _[Dataset](https://sdk.apify.com/docs/api/dataset)_ => `Promise<void>`
 
 | Argument | Type    | Required  | Description                                                                      |
 | -------- | ------- | --------- | -------------------------------------------------------------------------------- |
@@ -304,7 +310,7 @@ Push some data from the store into the specified dataset (or into the default on
 **Usage:**
 
 ```JavaScript
-await store.pushPathToDataset(`products.${productId}.reviews.${reviewId}`);
+await store.pushPath(`products.${productId}.reviews.${reviewId}`);
 ```
 
 > **Note:** When using this method to push to a dataset, the path is deleted within the state. If you don't want the data to be deleted from the global store after being pushed to the dataset, use regular `Apify.pushData()` instead.
@@ -319,7 +325,9 @@ Completely empty the entire contents of the store.
 
 () => `Promise<void>`
 
-Back the store up to the cloud. The backup will be stored in the "Storages" section of your Apify account under a Key-Value store named `CLOUD-GLOBAL-STORES`
+Back the store up to the cloud. The backup will be stored in the "Storages" section of your Apify account under a Key-Value store named `CLOUD-GLOBAL-STORES`. If you'd prefer to exclusively keep the store on the cloud, set the `cloud` option to `true` in `InitializeOptions`.
+
+> **Note:** If you're using `cloud: true` in `InitializeOptions`, you don't need to use this method. Just use `store.forceSave()` instead
 
 ### `await store.forceSave()`
 
@@ -357,7 +365,7 @@ console.log(summoned.state); // => {}
 
 () => `StoreInstances`
 
-Similar to `summon`, but returns the entire `storeInstances` object, which is a map of all instances of GlobalStore.
+Similar to `summon`, but returns the entire `storeInstances` object, which is a map of all created instances of GlobalStore.
 
 ### `GlobalStore.dumpAll()`
 
@@ -366,6 +374,8 @@ Similar to `summon`, but returns the entire `storeInstances` object, which is a 
 Dump all instances of GlobalStore at once.
 
 ## Best Practices
+
+These are not necessarily gospel, but they can help you modularize and scale your project while also making it more readable.
 
 ### Store Management
 
@@ -392,7 +402,7 @@ const summoned = GlobalStore.summon(storeNames.HOTELS);
 ### Using a reducer
 
 1. It is always best practice to define your action types as constants, then to import them when defining your reducer.
-2. Always define your reducer outside of the `store.addReducer()` method. Ideally, this should be done in a separate file.
+2. Always define your reducer outside of the `store.addReducer()` method. Ideally, this should be done in a separate file, then imported.
 
 **Example:**
 
@@ -459,7 +469,8 @@ In the Key-Value store, each store will be represented by an object looking like
     "data": {
         "sizeInBytes": 17,
         "lastModified": "2022-03-18T15:39:45.041Z",
-        "globalStoreVersion": "1.0.9"
+        "globalStoreVersion": "1.0.9",
+        "type": "LOCAL"
     }
 }
 ```

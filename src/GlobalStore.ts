@@ -47,12 +47,21 @@ class GlobalStore {
 
         storeInstances[storeName] = this;
 
-        this.log.general(`Store initialized with name: ${storeName}`);
+        this.log.general(`Store initialized.`);
+
+        if (this.debug) {
+            console.table({
+                storeName: this.storeName,
+                isCloud: this.isCloud,
+                debugMode: this.debug,
+                initialStateByteSize: Buffer.byteLength(JSON.stringify(this.classState.store), 'utf-8'),
+            });
+        }
     }
 
     /**
      * @param initializeOptions The options for initializing the GlobalStore.
-     * Initiate the global state store. GlobalStore doesn't have a public constructor function; therefore, this must be used.
+     * Initiate the global state store. GlobalStore **doesn't** have a public constructor function; therefore, this must be used.
      */
     static async init({ name, initialState = {}, cloud = false, debug = false }: InitializeOptions = {}): Promise<GlobalStore> {
         // Can only match certain characters
@@ -78,7 +87,7 @@ class GlobalStore {
     }
 
     /**
-     * Return the intance of GlobalStore matching the provided name. If no name is provided, the one with the default name will be returned.
+     * Return the intance of GlobalStore matching the provided name. If no name is provided, the one with the _default name_ will be returned.
      *
      * @param storeName The name of the store you'd like to have returned.
      */
@@ -91,7 +100,7 @@ class GlobalStore {
     }
 
     /**
-     * Return an object containing all instances of GlobalStore. Each key pertains to the each store's name.
+     * Return an object containing **all instances** of GlobalStore. Each key pertains to the each store's name.
      */
     static summonAll(): StoreInstances {
         return storeInstances;
@@ -99,7 +108,7 @@ class GlobalStore {
 
     /**
      *
-     * Retrieve the current state object of the store.
+     * Retrieve the current state object of the store instance.
      */
     get state(): StoreState {
         this.log.debug('Grabbing current state...');
@@ -149,11 +158,11 @@ class GlobalStore {
         if (!this.reducer) throw new Error(errorString('No reducer function was passed using the "addReducer" method!'));
 
         this.log.debug('Running reducer with action:');
-        console.table(action);
+        if (this.debug) console.table(action);
 
         const newState = this.reducer(this.classState.store, action);
 
-        this.log.debug('Replacing class state with new state...');
+        this.log.debug('Replacing state...');
         this.classState = { store: { ...newState }, data: getStoreData(newState, this.isCloud) };
     }
 
@@ -163,13 +172,13 @@ class GlobalStore {
      * @param path The path to set/replace within the store
      * @param value The value to set
      */
-    setPath(path: string, value: unknown) {
+    setPath(path: string | string[], value: unknown) {
         const store = { ...this.classState.store };
 
         this.log.debug('Setting new path...');
         objectPath.set(store, path, value);
 
-        this.log.debug('Replacing class state with new state...');
+        this.log.debug('Replacing state...');
         this.classState = { store, data: getStoreData(store, this.isCloud) };
     }
 
@@ -178,7 +187,7 @@ class GlobalStore {
      *
      * @param path A string version of the path within the state that you'd like to delete
      */
-    deletePath(path: string) {
+    deletePath(path: string | string[]) {
         this.log.debug(`Grabbing value for path ${path}...`);
         const value: Record<string, unknown> | Record<string, unknown>[] = objectPath.get(this.classState.store, path);
 
@@ -199,18 +208,18 @@ class GlobalStore {
      * @param path A string version of the path within the state that you'd like to push to the dataset
      * @param dataset Optional, provide a dataset to push to. If not provided, the default dataset will be used.
      */
-    async pushPathToDataset(path: string, dataset?: Dataset) {
+    async pushPath(path: string | string[], dataset?: Dataset) {
         this.log.debug(`Grabbing value for path ${path}...`);
         const value: Record<string, unknown> | Record<string, unknown>[] = objectPath.get(this.classState.store, path);
 
-        if (!value) throw new Error(errorString(`Path ${path} not found within store`));
+        if (!value) throw new Error(errorString(`Path ${path} not found within store!`));
 
-        if (typeof value !== 'object') throw new Error(errorString(`Can only push objects or arrays! Trying to push ${typeof value}`));
+        if (typeof value !== 'object') throw new Error(errorString(`Can only push objects or arrays! Trying to push ${typeof value}.`));
 
         this.log.debug('Pushing data to the dataset...');
         try {
-            if (!dataset) return Apify.pushData(value);
-            if (dataset) return dataset.pushData(value);
+            if (!dataset) Apify.pushData(value);
+            if (dataset) dataset.pushData(value);
         } catch (err) {
             throw new Error(errorString(`Failed to push to the dataset!: ${err}`));
         }
@@ -246,6 +255,7 @@ class GlobalStore {
      */
     async forceSave() {
         this.log.debug('Force-saving...');
+
         return this.keyValueStore.setValue(this.storeName, this.classState);
     }
 
@@ -253,6 +263,8 @@ class GlobalStore {
      * Back the store up to the cloud. If you want your store to automatically back up to the cloud on an interval, use the `cloud` option in `InitializeOptions` instead.
      */
     async backup() {
+        this.log.debug('Backing up the store to the cloud...');
+
         const cloudStore = await Apify.openKeyValueStore(CLOUD_GLOBAL_STORES);
         await cloudStore.setValue(this.storeName, this.classState);
     }

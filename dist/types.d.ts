@@ -6,11 +6,12 @@ export interface InitializeOptions {
     cloud?: boolean;
     debug?: boolean;
 }
+export declare type StoreType = 'LOCAL' | 'CLOUD';
 export interface StoreData {
     sizeInBytes: number;
     lastModified: string;
     globalStoreVersion: string;
-    type: 'LOCAL' | 'CLOUD';
+    type: StoreType;
 }
 export interface State {
     store: StoreState;
