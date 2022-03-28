@@ -11,10 +11,10 @@ describe('GlobalStore', () => {
         it('Should return an instance with proper properties', async () => {
             const store = await GlobalStore.init({ name: 'test-store', initialState: { hello: 'world' } });
             expect(store).toHaveProperty('storeName', 'TEST-STORE');
-            expect(store.classState.store).toEqual({ hello: 'world' });
-            expect(store.classState.data).toHaveProperty('lastModified');
-            expect(store.classState.data).toHaveProperty('globalStoreVersion');
-            expect(store.classState.data).toHaveProperty('sizeInBytes');
+            expect(store.state).toEqual({ hello: 'world' });
+            expect(store.info).toHaveProperty('lastModified');
+            expect(store.info).toHaveProperty('globalStoreVersion');
+            expect(store.info).toHaveProperty('sizeInBytes');
         });
     });
 
@@ -109,12 +109,24 @@ describe('GlobalStore', () => {
                 switch (action.type) {
                     default:
                         return state;
+                    case 'TEST':
+                        return {
+                            hello: 'world',
+                        };
                 }
             };
 
             summoned.addReducer(reducer);
 
-            expect(summoned.reducer).toBeDefined();
+            const func = () => {
+                summoned.setWithReducer({
+                    type: 'TEST',
+                });
+
+                return summoned.state;
+            };
+
+            expect(func()).toEqual({ hello: 'world' });
         });
 
         it('Should not accept more than one reducer function', () => {
@@ -225,6 +237,27 @@ describe('GlobalStore', () => {
 
             expect(hello).toHaveProperty('world');
             expect(typeof hello).toEqual('object');
+        });
+    });
+
+    describe('addMethod and useMethod', () => {
+        it('Should add a method to GlobalStore with StoreInstances passed in', () => {
+            GlobalStore.addMethod({
+                name: 'TEST-METHOD',
+                method: (instances, value) => {
+                    const store = instances['MY-TEST-STORE-HI'];
+
+                    store.set(() => {
+                        return {
+                            heya: value,
+                        };
+                    });
+                },
+            });
+
+            GlobalStore.useMethod('TEST-METHOD', 'hi');
+
+            expect(GlobalStore.summon('MY-TEST-STORE-HI').state).toEqual({ heya: 'hi' });
         });
     });
 });

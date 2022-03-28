@@ -666,7 +666,7 @@ type StoreInstances = Record<DefaultStoreName | string, GlobalStore>;
 -   **_AddMethodOptions_**
 
 ```TypeScript
-export type CustomMethod = (storeInstances: StoreInstances, ...rest: unknown[]) => unknown | Promise<unknown>;
+export type CustomMethod = (storeInstances: StoreInstances, ...rest: any[]) => unknown | Promise<unknown>;
 
 interface AddMethodOptions {
     name: string;
