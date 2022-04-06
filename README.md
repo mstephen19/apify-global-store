@@ -462,10 +462,10 @@ GlobalStore.addMethod({ name: ADD_PRODUCT_AND_REVIEWS, method });
 
 (**name**: _string_, **...rest**) => `void` | `Promise<void>`
 
-| Argument | Type      | Required  | Description                                                |
-| -------- | --------- | --------- | ---------------------------------------------------------- |
-| name     | string    | **true**  | The name of the method used when adding it to GlobalStore. |
-| ...rest  | unknown[] | **false** | Any custom parameters the method needs to run properly     |
+| Argument | Type   | Required  | Description                                                |
+| -------- | ------ | --------- | ---------------------------------------------------------- |
+| name     | string | **true**  | The name of the method used when adding it to GlobalStore. |
+| ...rest  | any[]  | **false** | Any custom parameters the method needs to run properly     |
 
 **Usage:**
 

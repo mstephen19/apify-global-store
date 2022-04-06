@@ -1,10 +1,10 @@
 import GlobalStore from './GlobalStore';
 
-export type StoreState = Record<string, unknown>;
+export type StoreState = Record<string, any>;
 
 export interface InitializeOptions {
     name?: string;
-    initialState?: Record<string, unknown>;
+    initialState?: Record<string, any>;
     cloud?: boolean;
     debug?: boolean;
 }

@@ -7,4 +7,4 @@ export const storeTypes: Record<StoreType, StoreType> = {
 
 export const GLOBAL_STORE = 'GLOBAL-STORE';
 export const CLOUD_GLOBAL_STORES = 'CLOUD-GLOBAL-STORES';
-export const CURRENT_VERSION = '1.1.3';
+export const CURRENT_VERSION = '1.1.4';
