@@ -1,5 +1,7 @@
 # Apify Global Store
 
+> **THIS PACKAGE IS DEPRECATED!** It was build for old versions of Crawlee and the Apify SDK.
+
 [![TypeScript](https://badges.frapsoft.com/typescript/code/typescript.svg?v=101)](https://github.com/ellerbrock/typescript-badges/)
 
 ![npm](https://img.shields.io/npm/v/apify-global-store)
